@@ -29,7 +29,7 @@ async def error_handler(update, context):
 async def init_db():
     await federation.init_db(DATABASE_URL)
 
-async def main():
+async def start_bot():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -46,4 +46,12 @@ async def main():
     application.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(start_bot())
+    except RuntimeError as e:
+        if str(e) == 'Event loop is closed':
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(start_bot())
+        else:
+            raise
