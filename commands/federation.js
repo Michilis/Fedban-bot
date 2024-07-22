@@ -32,10 +32,51 @@ async function handleMyFeds(bot, msg) {
   }
 }
 
-// Implement other federation commands like handleJoinFed, handleLeaveFed, handleFedInfo, handleFedAdmins similarly
+async function handleJoinFed(bot, msg) {
+  const args = msg.text.split(' ').slice(1);
+  if (args.length === 0) {
+    await bot.sendMessage(msg.chat.id, 'Please provide the ID of the federation you want to join.');
+    return;
+  }
+  const fedId = args[0];
+  try {
+    const federation = await Federation.findOne({ where: { id: fedId } });
+    if (!federation) {
+      await bot.sendMessage(msg.chat.id, 'Federation not found.');
+      return;
+    }
+    await federation.addMember(msg.chat.id);
+    await bot.sendMessage(msg.chat.id, `Successfully joined federation with ID: ${fedId}`);
+  } catch (error) {
+    console.error('Error joining federation:', error);
+    await bot.sendMessage(msg.chat.id, 'Error joining federation.');
+  }
+}
+
+async function handleLeaveFed(bot, msg) {
+  const args = msg.text.split(' ').slice(1);
+  if (args.length === 0) {
+    await bot.sendMessage(msg.chat.id, 'Please provide the ID of the federation you want to leave.');
+    return;
+  }
+  const fedId = args[0];
+  try {
+    const federation = await Federation.findOne({ where: { id: fedId } });
+    if (!federation) {
+      await bot.sendMessage(msg.chat.id, 'Federation not found.');
+      return;
+    }
+    await federation.removeMember(msg.chat.id);
+    await bot.sendMessage(msg.chat.id, `Successfully left federation with ID: ${fedId}`);
+  } catch (error) {
+    console.error('Error leaving federation:', error);
+    await bot.sendMessage(msg.chat.id, 'Error leaving federation.');
+  }
+}
 
 module.exports = {
   handleNewFed,
   handleMyFeds,
-  // Export other handlers like handleJoinFed, handleLeaveFed, handleFedInfo, handleFedAdmins
+  handleJoinFed,
+  handleLeaveFed
 };
