@@ -1,39 +1,43 @@
 # Fedban Bot
 
-A Telegram bot to manage federations and ban users across multiple groups.
+Fedban Bot is a Telegram bot designed to manage federations of groups, enabling efficient and centralized management of bans and admin promotions across multiple groups.
 
 ## Features
 
-- Create and manage federations
-- Ban and unban users federation-wide
-- Transfer federation ownership
-- Promote and demote federation admins
-- Broadcast messages to all groups in a federation
-- Set and unset federation log channels
+- Federation Management
+- User Management
+- Information Retrieval
 
-## Setup
+## Commands
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/fedban-bot.git
-   cd fedban-bot
-    ```
+### Federation Management Commands
 
-2. Create a `.env` file and add your bot token
-    ```env
-    BOT_TOKEN=your-telegram-bot-token
-    ```
+- /newfed <fedname>
+- /joinfed <FedID>
+- /leavefed <FedID>
+- /renamefed <FedID> <newname>
+- /fedtransfer <user> <FedID>
+- /delfed <FedID>
+- /setfedlog <channel_id> <FedID>
+- /unsetfedlog <FedID>
 
-3. Install dependencies
-    ```sh
-    pip install -r requirements.txt
-    ```
+### User Management Commands
 
-4. Run the bot
-    ```sh
-    python bot.py
-    ```
+- /fpromote <user>
+- /fdemote <user>
+- /fban <user> <reason>
+- /sfban <user> <reason>
+- /unfban <user> <reason>
+- /sunfban <user> <reason>
 
-## License
+### Information Retrieval Commands
 
-This project is licensed under the MIT License.
+- /fedinfo <FedID>
+- /fedadmins <FedID>
+- /fedchats <FedID>
+- /fedstat
+- /fedstat <userID>
+- /fedstat <FedID>
+- /fedstat <userID> <FedID>
+- /chatfed
+- /fbroadcast
