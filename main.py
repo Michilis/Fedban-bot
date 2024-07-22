@@ -1,5 +1,4 @@
 import logging
-import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CallbackContext, CommandHandler
 from modules import federation, help
@@ -30,7 +29,7 @@ async def error_handler(update: Update, context: CallbackContext) -> None:
 async def init_db():
     await federation.init_db(DATABASE_URL)
 
-async def start_bot():
+async def main() -> None:
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -42,10 +41,8 @@ async def start_bot():
     await init_db()
 
     logger.info("Starting bot...")
-    application.run_polling()
-
-async def main() -> None:
-    await start_bot()
+    await application.run_async()
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(main())
