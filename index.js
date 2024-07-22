@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { connectDb } = require('./db');
-const { handleCommands } = require('./commands/index');
+const { handleCommands, handleHelpCallback, handleHelpSectionCallback } = require('./commands');
 
 require('dotenv').config();
 
