@@ -1,7 +1,7 @@
 from functools import wraps
 from pyrogram.errors.exceptions.forbidden_403 import ChatWriteForbidden
 from pyrogram.types import Message
-from wbb import SUDOERS, app
+from wbb import app
 from wbb.modules.admin import member_permissions
 
 async def authorised(func, subFunc2, client, message, *args, **kwargs):
@@ -52,7 +52,7 @@ def adminsOnly(permission):
                 return await unauthorised(message, permission, subFunc2)
             userID = message.from_user.id
             permissions = await member_permissions(chatID, userID)
-            if userID not in SUDOERS and permission not in permissions:
+            if permission not in permissions:
                 return await unauthorised(message, permission, subFunc2)
             return await authorised(
                 func, subFunc2, client, message, *args, **kwargs
