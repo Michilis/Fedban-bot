@@ -1,5 +1,5 @@
 const { handleStart, handleHelp } = require('./general');
-const { handleNewFed, handleMyFeds, handleJoinFed, handleLeaveFed, handleFedInfo, handleFedAdmins } = require('./federation');
+const { handleNewFed, handleMyFeds } = require('./federation');
 const { handleFPromote, handleFDemote, handleFBan, handleUnFBan } = require('./admin');
 const { handleHelpCallback, handleHelpSectionCallback } = require('./help');
 
@@ -19,18 +19,6 @@ async function handleCommands(bot, msg) {
         break;
       case '/myfeds':
         await handleMyFeds(bot, msg);
-        break;
-      case '/joinfed':
-        await handleJoinFed(bot, msg);
-        break;
-      case '/leavefed':
-        await handleLeaveFed(bot, msg);
-        break;
-      case '/fedinfo':
-        await handleFedInfo(bot, msg);
-        break;
-      case '/fedadmins':
-        await handleFedAdmins(bot, msg);
         break;
       case '/fpromote':
         await handleFPromote(bot, msg);
