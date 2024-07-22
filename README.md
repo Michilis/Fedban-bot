@@ -6,14 +6,13 @@ A Telegram bot that manages federated bans, karma system, and admin functionalit
 
 - Federated bans across multiple groups.
 - Karma system for user interactions.
-- Admin functionalities like banning, kicking, muting, and more.
 - Permission management for various commands.
 
 ## Setup
 
 1. Clone the repository
     ```sh
-    git clone https://github.com/Michilis/Fedban-bot.git
+    git clone https://github.com/yourusername/FedbanBot.git
     cd FedbanBot
     ```
 
