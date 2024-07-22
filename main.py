@@ -1,5 +1,5 @@
 import asyncio
-from pyrogram import Client, filters
+from pyrogram import Client
 from config import Config
 from modules import federation, help
 
