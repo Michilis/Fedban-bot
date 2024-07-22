@@ -12,6 +12,10 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID"))
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Check if BOT_TOKEN is loaded correctly
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN is not set. Please check your .env file.")
+
 # Initialize the Pyrogram Client
 app = Client("fedban_bot", bot_token=BOT_TOKEN)
 
