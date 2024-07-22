@@ -42,10 +42,8 @@ async def main():
 
     logger.info("Starting bot...")
     await application.initialize()
-    await application.start()
     logger.info("Bot started, now polling updates...")
-    await application.updater.start_polling()
-    await application.stop()
+    await application.start_polling()
 
 if __name__ == "__main__":
     asyncio.run(main())
