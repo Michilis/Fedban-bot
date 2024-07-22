@@ -46,7 +46,11 @@ async def start_bot():
 
     await application.start()
     await application.updater.start_polling()
-    await application.updater.stop()
+    
+    # Keep the application running until interrupted
+    await application.running.wait()
+
+    await application.stop()
     await application.shutdown()
 
 if __name__ == "__main__":
