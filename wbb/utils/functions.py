@@ -1,18 +1,20 @@
-import re
+def extract_user(message):
+    user_id = None
+    if message.reply_to_message:
+        user_id = message.reply_to_message.from_user.id
+    elif len(message.command) > 1:
+        user_id = int(message.command[1])
+    return user_id
 
-async def extract_user(message):
-    # Extract user ID from message
-    # ...
-
-async def extract_user_and_reason(message, sender_chat=False):
-    # Extract user ID and reason from message
-    # ...
-
-async def time_converter(message, time_value):
-    # Convert time value to appropriate format
-    # ...
-
-# Other utility functions
-
-# ...
-
+def extract_user_and_reason(message):
+    user_id, reason = None, None
+    if message.reply_to_message:
+        user_id = message.reply_to_message.from_user.id
+    if len(message.command) > 2:
+        reason = ' '.join(message.command[2:])
+    elif len(message.command) > 1:
+        try:
+            user_id = int(message.command[1])
+        except ValueError:
+            reason = ' '.join(message.command[1:])
+    return user_id, reason
