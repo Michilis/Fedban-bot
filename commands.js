@@ -1,151 +1,154 @@
-const { User, Federation, FederationAdmin, FederationBan, Chat, Log } = require('./db');
-const { logGroupId } = require('./config');
-const { v4: uuidv4 } = require('uuid');
-const { helpMain, helpFedAdminCommands, helpFedOwnerCommands, helpUserCommands, startMessage } = require('./messages');
-const TelegramBot = require('node-telegram-bot-api');
+const { User, Federation, Chat, FederationAdmin, FederationBan } = require('./db');
+const messages = require('./messages');
 
-// Extract user and reason utility function
-async function extractUserAndReason(msg) {
-  const parts = msg.text.split(' ');
-  if (parts.length < 2) return [null, null];
-  const userId = parseInt(parts[1].replace('@', ''), 10);
-  const reason = parts.slice(2).join(' ');
-  return [userId, reason];
-}
-
-// Command Handlers
+// Handle /start command
 async function handleStart(bot, msg) {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, startMessage);
+  await bot.sendMessage(chatId, messages.startMessage);
 }
 
+// Handle /help command
 async function handleHelp(bot, msg) {
   const chatId = msg.chat.id;
-  const opts = {
+  await bot.sendMessage(chatId, messages.helpMessage, {
     reply_markup: {
       inline_keyboard: [
-        [
-          { text: 'Fed Admin Commands', callback_data: 'help_fed_admin' },
-          { text: 'Federation Owner Commands', callback_data: 'help_fed_owner' }
-        ],
-        [{ text: 'User Commands', callback_data: 'help_user' }]
-      ]
-    }
-  };
-  bot.sendMessage(chatId, helpMain, opts);
+        [{ text: 'Federations', callback_data: 'help_federations' }],
+        [{ text: 'Fed Admin Commands', callback_data: 'help_fed_admin_commands' }],
+        [{ text: 'Federation Owner Commands', callback_data: 'help_federation_owner_commands' }],
+        [{ text: 'User Commands', callback_data: 'help_user_commands' }],
+      ],
+    },
+  });
 }
 
+// Handle callback queries for help menu
 async function handleHelpCallback(bot, query) {
-  let text;
-  const backButton = [{ text: 'Back', callback_data: 'help_main' }];
+  const chatId = query.message.chat.id;
+  const messageId = query.message.message_id;
+  let responseText;
+
   switch (query.data) {
-    case 'help_fed_admin':
-      text = helpFedAdminCommands;
+    case 'help_federations':
+      responseText = messages.federationsHelp;
       break;
-    case 'help_fed_owner':
-      text = helpFedOwnerCommands;
+    case 'help_fed_admin_commands':
+      responseText = messages.fedAdminCommandsHelp;
       break;
-    case 'help_user':
-      text = helpUserCommands;
+    case 'help_federation_owner_commands':
+      responseText = messages.federationOwnerCommandsHelp;
       break;
-    case 'help_main':
-      text = helpMain;
+    case 'help_user_commands':
+      responseText = messages.userCommandsHelp;
       break;
     default:
-      text = helpMain;
+      responseText = messages.helpMessage;
   }
-  const opts = {
-    chat_id: query.message.chat.id,
-    message_id: query.message.message_id,
+
+  await bot.editMessageText(responseText, {
+    chat_id: chatId,
+    message_id: messageId,
     reply_markup: {
-      inline_keyboard: query.data === 'help_main' ? [
-        [
-          { text: 'Fed Admin Commands', callback_data: 'help_fed_admin' },
-          { text: 'Federation Owner Commands', callback_data: 'help_fed_owner' }
-        ],
-        [{ text: 'User Commands', callback_data: 'help_user' }]
-      ] : [backButton]
-    }
-  };
-  bot.editMessageText(text, opts);
+      inline_keyboard: [
+        [{ text: 'Back', callback_data: 'help_back' }],
+      ],
+    },
+  });
 }
 
+// Handle /newfed command
 async function handleNewFed(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const federationName = msg.text.split(' ').slice(1).join(' ').trim();
 
-  if (!federationName) {
+  if (msg.chat.type !== 'private') {
+    return bot.sendMessage(chatId, 'Please create federations via private message.');
+  }
+
+  const fedName = msg.text.split(' ').slice(1).join(' ');
+  if (!fedName) {
     return bot.sendMessage(chatId, 'Please provide a name for the federation.');
   }
 
   try {
-    const newFederation = await Federation.create({
-      name: federationName,
+    const federation = await Federation.create({
+      name: fedName,
       ownerId: userId,
     });
 
-    await User.upsert({ id: userId, username: msg.from.username });
-
-    bot.sendMessage(chatId, `Federation "${federationName}" created with ID ${newFederation.id}`);
+    await bot.sendMessage(chatId, `Federation created successfully!\n\nName: ${federation.name}\nID: ${federation.id}`);
   } catch (error) {
     console.error('Error creating federation:', error);
-    bot.sendMessage(chatId, 'Failed to create federation. Please try again later.');
+    await bot.sendMessage(chatId, 'Failed to create federation. Please try again later.');
   }
 }
 
+// Handle /delfed command
 async function handleDelFed(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const args = msg.text.split(' ');
-  if (args.length < 2) {
+
+  if (msg.chat.type !== 'private') {
+    return bot.sendMessage(chatId, 'Please delete federations via private message.');
+  }
+
+  const fedId = msg.text.split(' ')[1];
+  if (!fedId) {
     return bot.sendMessage(chatId, 'Please provide the federation ID.');
   }
-  const federationId = args[1].trim();
 
   try {
-    const federation = await Federation.findOne({ where: { id: federationId } });
+    const federation = await Federation.findOne({ where: { id: fedId, ownerId: userId } });
     if (!federation) {
-      return bot.sendMessage(chatId, 'Federation not found.');
+      return bot.sendMessage(chatId, 'Federation not found or you are not the owner.');
     }
-    if (federation.ownerId !== userId) {
-      return bot.sendMessage(chatId, 'Only the federation owner can delete the federation.');
-    }
-    await Federation.destroy({ where: { id: federationId } });
-    bot.sendMessage(chatId, 'Federation deleted successfully.');
+
+    await Federation.destroy({ where: { id: fedId } });
+    await bot.sendMessage(chatId, 'Federation deleted successfully.');
   } catch (error) {
     console.error('Error deleting federation:', error);
-    bot.sendMessage(chatId, 'Failed to delete federation. Please try again later.');
+    await bot.sendMessage(chatId, 'Failed to delete federation. Please try again later.');
   }
 }
 
+// Handle /fedtransfer command
 async function handleFedTransfer(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const args = msg.text.split(' ');
-  if (args.length < 3) {
-    return bot.sendMessage(chatId, 'Usage: /fedtransfer <user_id> <federation_id>');
+
+  if (msg.chat.type !== 'private') {
+    return bot.sendMessage(chatId, 'Please transfer federations via private message.');
   }
-  const newOwnerId = parseInt(args[1], 10);
-  const federationId = args[2].trim();
+
+  const [_, newOwnerUsername] = msg.text.split(' ');
+  const newOwner = await bot.getChat(newOwnerUsername);
+
+  if (!newOwner) {
+    return bot.sendMessage(chatId, 'User not found.');
+  }
+
+  const fedId = msg.text.split(' ')[2];
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'Please provide the federation ID.');
+  }
 
   try {
-    const federation = await Federation.findOne({ where: { id: federationId } });
+    const federation = await Federation.findOne({ where: { id: fedId, ownerId: userId } });
     if (!federation) {
-      return bot.sendMessage(chatId, 'Federation not found.');
+      return bot.sendMessage(chatId, 'Federation not found or you are not the owner.');
     }
-    if (federation.ownerId !== userId) {
-      return bot.sendMessage(chatId, 'Only the federation owner can transfer ownership.');
-    }
-    federation.ownerId = newOwnerId;
+
+    federation.ownerId = newOwner.id;
     await federation.save();
-    bot.sendMessage(chatId, 'Federation ownership transferred successfully.');
+
+    await bot.sendMessage(chatId, `Federation ownership transferred to ${newOwner.username}.`);
   } catch (error) {
-    console.error('Error transferring federation ownership:', error);
-    bot.sendMessage(chatId, 'Failed to transfer ownership. Please try again later.');
+    console.error('Error transferring federation:', error);
+    await bot.sendMessage(chatId, 'Failed to transfer federation. Please try again later.');
   }
 }
 
+// Handle /myfeds command
 async function handleMyFeds(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
@@ -155,393 +158,383 @@ async function handleMyFeds(bot, msg) {
     if (federations.length === 0) {
       return bot.sendMessage(chatId, 'You have not created any federations.');
     }
-    const responseText = federations.map(fed => `Name: ${fed.name}\nID: ${fed.id}`).join('\n\n');
-    bot.sendMessage(chatId, `Your federations:\n\n${responseText}`);
+
+    const response = federations.map(fed => `Name: ${fed.name}\nID: ${fed.id}`).join('\n\n');
+    await bot.sendMessage(chatId, response);
   } catch (error) {
-    console.error('Error retrieving federations:', error);
-    bot.sendMessage(chatId, 'Failed to retrieve federations. Please try again later.');
+    console.error('Error fetching federations:', error);
+    await bot.sendMessage(chatId, 'Failed to fetch federations. Please try again later.');
   }
 }
 
+// Handle /renamefed command
 async function handleRenameFed(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const args = msg.text.split(' ');
-  if (args.length < 3) {
-    return bot.sendMessage(chatId, 'Usage: /renamefed <federation_id> <new_name>');
+
+  if (msg.chat.type !== 'private') {
+    return bot.sendMessage(chatId, 'Please rename federations via private message.');
   }
-  const federationId = args[1].trim();
-  const newName = args.slice(2).join(' ');
+
+  const [fedId, ...newNameParts] = msg.text.split(' ').slice(1);
+  const newName = newNameParts.join(' ');
+
+  if (!fedId || !newName) {
+    return bot.sendMessage(chatId, 'Please provide the federation ID and the new name.');
+  }
 
   try {
-    const federation = await Federation.findOne({ where: { id: federationId } });
+    const federation = await Federation.findOne({ where: { id: fedId, ownerId: userId } });
     if (!federation) {
-      return bot.sendMessage(chatId, 'Federation not found.');
+      return bot.sendMessage(chatId, 'Federation not found or you are not the owner.');
     }
-    if (federation.ownerId !== userId) {
-      return bot.sendMessage(chatId, 'Only the federation owner can rename the federation.');
-    }
+
     federation.name = newName;
     await federation.save();
-    bot.sendMessage(chatId, `Federation renamed to "${newName}".`);
+
+    await bot.sendMessage(chatId, `Federation renamed successfully to ${newName}.`);
   } catch (error) {
     console.error('Error renaming federation:', error);
-    bot.sendMessage(chatId, 'Failed to rename federation. Please try again later.');
+    await bot.sendMessage(chatId, 'Failed to rename federation. Please try again later.');
   }
 }
 
+// Handle /setfedlog command
 async function handleSetFedLog(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const args = msg.text.split(' ');
-  if (args.length < 3) {
-    return bot.sendMessage(chatId, 'Usage: /setfedlog <channel_id> <federation_id>');
+
+  if (msg.chat.type !== 'private') {
+    return bot.sendMessage(chatId, 'Please set federation log via private message.');
   }
-  const channelId = args[1].trim();
-  const federationId = args[2].trim();
+
+  const [fedId, logChannelId] = msg.text.split(' ').slice(1);
+
+  if (!fedId || !logChannelId) {
+    return bot.sendMessage(chatId, 'Please provide the federation ID and the log channel ID.');
+  }
 
   try {
-    const federation = await Federation.findOne({ where: { id: federationId } });
+    const federation = await Federation.findOne({ where: { id: fedId, ownerId: userId } });
     if (!federation) {
-      return bot.sendMessage(chatId, 'Federation not found.');
+      return bot.sendMessage(chatId, 'Federation not found or you are not the owner.');
     }
-    if (federation.ownerId !== userId) {
-      return bot.sendMessage(chatId, 'Only the federation owner can set the log channel.');
-    }
-    federation.logChannelId = channelId;
+
+    federation.logChannelId = logChannelId;
     await federation.save();
-    bot.sendMessage(chatId, 'Log channel set successfully.');
+
+    await bot.sendMessage(chatId, `Federation log channel set to ${logChannelId}.`);
   } catch (error) {
-    console.error('Error setting log channel:', error);
-    bot.sendMessage(chatId, 'Failed to set log channel. Please try again later.');
+    console.error('Error setting federation log:', error);
+    await bot.sendMessage(chatId, 'Failed to set federation log. Please try again later.');
   }
 }
 
+// Handle /unsetfedlog command
 async function handleUnsetFedLog(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const args = msg.text.split(' ');
-  if (args.length < 2) {
-    return bot.sendMessage(chatId, 'Usage: /unsetfedlog <federation_id>');
+
+  if (msg.chat.type !== 'private') {
+    return bot.sendMessage(chatId, 'Please unset federation log via private message.');
   }
-  const federationId = args[1].trim();
+
+  const fedId = msg.text.split(' ')[1];
+
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'Please provide the federation ID.');
+  }
 
   try {
-    const federation = await Federation.findOne({ where: { id: federationId } });
+    const federation = await Federation.findOne({ where: { id: fedId, ownerId: userId } });
     if (!federation) {
-      return bot.sendMessage(chatId, 'Federation not found.');
+      return bot.sendMessage(chatId, 'Federation not found or you are not the owner.');
     }
-    if (federation.ownerId !== userId) {
-      return bot.sendMessage(chatId, 'Only the federation owner can unset the log channel.');
-    }
+
     federation.logChannelId = null;
     await federation.save();
-    bot.sendMessage(chatId, 'Log channel unset successfully.');
+
+    await bot.sendMessage(chatId, 'Federation log channel unset.');
   } catch (error) {
-    console.error('Error unsetting log channel:', error);
-    bot.sendMessage(chatId, 'Failed to unset log channel. Please try again later.');
+    console.error('Error unsetting federation log:', error);
+    await bot.sendMessage(chatId, 'Failed to unset federation log. Please try again later.');
   }
 }
 
+// Handle /joinfed command
 async function handleJoinFed(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const args = msg.text.split(' ');
-  if (args.length < 2) {
-    return bot.sendMessage(chatId, 'Usage: /joinfed <federation_id>');
+
+  if (msg.chat.type !== 'supergroup') {
+    return bot.sendMessage(chatId, 'Only supergroups can join federations.');
   }
-  const federationId = args[1].trim();
+
+  const fedId = msg.text.split(' ')[1];
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'Please provide the federation ID.');
+  }
 
   try {
-    const chat = await Chat.findOne({ where: { id: chatId } });
-    if (chat && chat.federationId) {
-      return bot.sendMessage(chatId, 'This chat is already part of a federation.');
-    }
-    const federation = await Federation.findOne({ where: { id: federationId } });
+    const federation = await Federation.findOne({ where: { id: fedId } });
     if (!federation) {
       return bot.sendMessage(chatId, 'Federation not found.');
     }
-    const chatCreator = await bot.getChatAdministrators(chatId);
-    const isCreator = chatCreator.some(admin => admin.user.id === userId && admin.status === 'creator');
-    if (!isCreator) {
-      return bot.sendMessage(chatId, 'Only the group creator can join a federation.');
+
+    const chatMember = await bot.getChatMember(chatId, userId);
+    if (chatMember.status !== 'creator') {
+      return bot.sendMessage(chatId, 'Only the group creator can join the federation.');
     }
-    await Chat.upsert({ id: chatId, title: msg.chat.title, federationId });
-    bot.sendMessage(chatId, `Successfully joined the "${federation.name}" federation!`);
+
+    await Chat.upsert({ id: chatId, title: msg.chat.title, federationId: fedId });
+    await bot.sendMessage(chatId, `Successfully joined the "${federation.name}" federation!`);
   } catch (error) {
     console.error('Error joining federation:', error);
-    bot.sendMessage(chatId, 'Failed to join federation. Please try again later.');
+    await bot.sendMessage(chatId, 'Failed to join federation. Please try again later.');
   }
 }
 
+// Handle /leavefed command
 async function handleLeaveFed(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const args = msg.text.split(' ');
-  if (args.length < 2) {
-    return bot.sendMessage(chatId, 'Usage: /leavefed <federation_id>');
+
+  if (msg.chat.type !== 'supergroup') {
+    return bot.sendMessage(chatId, 'Only supergroups can leave federations.');
   }
-  const federationId = args[1].trim();
+
+  const fedId = msg.text.split(' ')[1];
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'Please provide the federation ID.');
+  }
 
   try {
-    const chat = await Chat.findOne({ where: { id: chatId } });
-    if (!chat || chat.federationId !== federationId) {
+    const chatMember = await bot.getChatMember(chatId, userId);
+    if (chatMember.status !== 'creator') {
+      return bot.sendMessage(chatId, 'Only the group creator can leave the federation.');
+    }
+
+    const chat = await Chat.findOne({ where: { id: chatId, federationId: fedId } });
+    if (!chat) {
       return bot.sendMessage(chatId, 'This chat is not part of the specified federation.');
     }
-    const chatCreator = await bot.getChatAdministrators(chatId);
-    const isCreator = chatCreator.some(admin => admin.user.id === userId && admin.status === 'creator');
-    if (!isCreator) {
-      return bot.sendMessage(chatId, 'Only the group creator can leave a federation.');
-    }
-    chat.federationId = null;
-    await chat.save();
-    bot.sendMessage(chatId, `Successfully left the "${federationId}" federation!`);
+
+    await chat.destroy();
+    await bot.sendMessage(chatId, 'Successfully left the federation.');
   } catch (error) {
     console.error('Error leaving federation:', error);
-    bot.sendMessage(chatId, 'Failed to leave federation. Please try again later.');
+    await bot.sendMessage(chatId, 'Failed to leave federation. Please try again later.');
   }
 }
 
+// Handle /fedinfo command
 async function handleFedInfo(bot, msg) {
   const chatId = msg.chat.id;
-  const args = msg.text.split(' ');
-  if (args.length < 2) {
-    return bot.sendMessage(chatId, 'Usage: /fedinfo <federation_id>');
+
+  const fedId = msg.text.split(' ')[1];
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'Please provide the federation ID.');
   }
-  const federationId = args[1].trim();
 
   try {
-    const federation = await Federation.findOne({ where: { id: federationId } });
+    const federation = await Federation.findOne({ where: { id: fedId } });
     if (!federation) {
       return bot.sendMessage(chatId, 'Federation not found.');
     }
-    const responseText = `Federation Name: ${federation.name}\nOwner ID: ${federation.ownerId}`;
-    bot.sendMessage(chatId, responseText);
+
+    const chats = await Chat.findAll({ where: { federationId: fedId } });
+    const response = `
+      Federation info:
+      Name: ${federation.name}
+      ID: ${federation.id}
+      Chats in the federation: ${chats.length}
+    `;
+    await bot.sendMessage(chatId, response);
   } catch (error) {
-    console.error('Error retrieving federation info:', error);
-    bot.sendMessage(chatId, 'Failed to retrieve federation info. Please try again later.');
+    console.error('Error fetching federation info:', error);
+    await bot.sendMessage(chatId, 'Failed to fetch federation info. Please try again later.');
   }
 }
 
+// Handle /fedadmins command
 async function handleFedAdmins(bot, msg) {
   const chatId = msg.chat.id;
-  const args = msg.text.split(' ');
-  if (args.length < 2) {
-    return bot.sendMessage(chatId, 'Usage: /fedadmins <federation_id>');
-  }
-  const federationId = args[1].trim();
 
-  try {
-    const admins = await FederationAdmin.findAll({ where: { federationId } });
-    if (admins.length === 0) {
-      return bot.sendMessage(chatId, 'No admins found for this federation.');
-    }
-    const responseText = admins.map(admin => `Admin ID: ${admin.userId}`).join('\n');
-    bot.sendMessage(chatId, `Federation Admins:\n\n${responseText}`);
-  } catch (error) {
-    console.error('Error retrieving federation admins:', error);
-    bot.sendMessage(chatId, 'Failed to retrieve federation admins. Please try again later.');
-  }
-}
-
-async function handleFBan(bot, msg) {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  const [targetUserId, reason] = await extractUserAndReason(msg);
-  if (!targetUserId || !reason) {
-    return bot.sendMessage(chatId, 'Usage: /fban <user_id> <reason>');
+  const fedId = msg.text.split(' ')[1];
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'Please provide the federation ID.');
   }
 
   try {
-    const chat = await Chat.findOne({ where: { id: chatId } });
-    if (!chat || !chat.federationId) {
-      return bot.sendMessage(chatId, 'This chat is not part of any federation.');
+    const federation = await Federation.findOne({ where: { id: fedId } });
+    if (!federation) {
+      return bot.sendMessage(chatId, 'Federation not found.');
     }
-    const federation = await Federation.findOne({ where: { id: chat.federationId } });
-    const isAdmin = await FederationAdmin.findOne({ where: { federationId: federation.id, userId } });
-    if (federation.ownerId !== userId && !isAdmin) {
-      return bot.sendMessage(chatId, 'Only federation admins can ban users.');
-    }
-    await FederationBan.upsert({ federationId: federation.id, userId: targetUserId, reason });
-    bot.sendMessage(chatId, 'User banned federation-wide successfully.');
+
+    const admins = await FederationAdmin.findAll({ where: { federationId: fedId } });
+    const adminUserIds = admins.map(admin => admin.userId);
+    const adminUsers = await Promise.all(adminUserIds.map(id => bot.getChat(id)));
+    const response = adminUsers.map(user => user.username).join('\n');
+    await bot.sendMessage(chatId, `Federation Admins:\n${response}`);
   } catch (error) {
-    console.error('Error banning user:', error);
-    bot.sendMessage(chatId, 'Failed to ban user. Please try again later.');
+    console.error('Error fetching federation admins:', error);
+    await bot.sendMessage(chatId, 'Failed to fetch federation admins. Please try again later.');
   }
 }
 
-async function handleUnFBan(bot, msg) {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  const [targetUserId, reason] = await extractUserAndReason(msg);
-  if (!targetUserId || !reason) {
-    return bot.sendMessage(chatId, 'Usage: /unfban <user_id> <reason>');
-  }
-
-  try {
-    const chat = await Chat.findOne({ where: { id: chatId } });
-    if (!chat || !chat.federationId) {
-      return bot.sendMessage(chatId, 'This chat is not part of any federation.');
-    }
-    const federation = await Federation.findOne({ where: { id: chat.federationId } });
-    const isAdmin = await FederationAdmin.findOne({ where: { federationId: federation.id, userId } });
-    if (federation.ownerId !== userId && !isAdmin) {
-      return bot.sendMessage(chatId, 'Only federation admins can unban users.');
-    }
-    await FederationBan.destroy({ where: { federationId: federation.id, userId: targetUserId } });
-    bot.sendMessage(chatId, 'User unbanned federation-wide successfully.');
-  } catch (error) {
-    console.error('Error unbanning user:', error);
-    bot.sendMessage(chatId, 'Failed to unban user. Please try again later.');
-  }
-}
-
-async function handleChatFed(bot, msg) {
-  const chatId = msg.chat.id;
-
-  try {
-    const chat = await Chat.findOne({ where: { id: chatId } });
-    if (!chat || !chat.federationId) {
-      return bot.sendMessage(chatId, 'This chat is not part of any federation.');
-    }
-    const federation = await Federation.findOne({ where: { id: chat.federationId } });
-    const responseText = `This chat is part of federation: ${federation.name}`;
-    bot.sendMessage(chatId, responseText);
-  } catch (error) {
-    console.error('Error retrieving chat federation info:', error);
-    bot.sendMessage(chatId, 'Failed to retrieve chat federation info. Please try again later.');
-  }
-}
-
-async function handleFedChats(bot, msg) {
-  const chatId = msg.chat.id;
-  const args = msg.text.split(' ');
-  if (args.length < 2) {
-    return bot.sendMessage(chatId, 'Usage: /fedchats <federation_id>');
-  }
-  const federationId = args[1].trim();
-
-  try {
-    const chats = await Chat.findAll({ where: { federationId } });
-    if (chats.length === 0) {
-      return bot.sendMessage(chatId, 'No chats found for this federation.');
-    }
-    const responseText = chats.map(chat => `Chat Title: ${chat.title}\nChat ID: ${chat.id}`).join('\n\n');
-    bot.sendMessage(chatId, `Federation Chats:\n\n${responseText}`);
-  } catch (error) {
-    console.error('Error retrieving federation chats:', error);
-    bot.sendMessage(chatId, 'Failed to retrieve federation chats. Please try again later.');
-  }
-}
-
-async function handleFBroadcast(bot, msg) {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  const replyMessage = msg.reply_to_message;
-
-  if (!replyMessage) {
-    return bot.sendMessage(chatId, 'Reply to a message to broadcast it.');
-  }
-
-  try {
-    const chat = await Chat.findOne({ where: { id: chatId } });
-    if (!chat || !chat.federationId) {
-      return bot.sendMessage(chatId, 'This chat is not part of any federation.');
-    }
-    const federation = await Federation.findOne({ where: { id: chat.federationId } });
-    const isAdmin = await FederationAdmin.findOne({ where: { federationId: federation.id, userId } });
-    if (federation.ownerId !== userId && !isAdmin) {
-      return bot.sendMessage(chatId, 'Only federation admins can broadcast messages.');
-    }
-    const chats = await Chat.findAll({ where: { federationId: federation.id } });
-    const message = replyMessage.text || replyMessage.caption;
-
-    for (const chat of chats) {
-      try {
-        await bot.sendMessage(chat.id, message);
-      } catch (error) {
-        console.error(`Error sending message to chat ${chat.id}:`, error);
-      }
-    }
-    bot.sendMessage(chatId, 'Message broadcasted successfully.');
-  } catch (error) {
-    console.error('Error broadcasting message:', error);
-    bot.sendMessage(chatId, 'Failed to broadcast message. Please try again later.');
-  }
-}
-
-async function handleFedStat(bot, msg) {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  const [targetUserId] = await extractUserAndReason(msg);
-  const targetId = targetUserId || userId;
-
-  try {
-    const bans = await FederationBan.findAll({ where: { userId: targetId } });
-    if (bans.length === 0) {
-      return bot.sendMessage(chatId, 'This user is not banned in any federations.');
-    }
-    const responseText = bans.map(ban => `Federation ID: ${ban.federationId}\nReason: ${ban.reason}`).join('\n\n');
-    bot.sendMessage(chatId, `Federation Bans:\n\n${responseText}`);
-  } catch (error) {
-    console.error('Error retrieving federation ban status:', error);
-    bot.sendMessage(chatId, 'Failed to retrieve federation ban status. Please try again later.');
-  }
-}
-
+// Handle /fpromote command
 async function handleFPromote(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const [targetUserId] = await extractUserAndReason(msg);
-  if (!targetUserId) {
-    return bot.sendMessage(chatId, 'Usage: /fpromote <user_id>');
+
+  const [_, username] = msg.text.split(' ');
+  const user = await bot.getChat(username);
+
+  if (!user) {
+    return bot.sendMessage(chatId, 'User not found.');
+  }
+
+  const fedId = await getFedIdFromChat(chatId);
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'This chat is not part of any federation.');
   }
 
   try {
-    const chat = await Chat.findOne({ where: { id: chatId } });
-    if (!chat || !chat.federationId) {
-      return bot.sendMessage(chatId, 'This chat is not part of any federation.');
+    const federation = await Federation.findOne({ where: { id: fedId, ownerId: userId } });
+    if (!federation) {
+      return bot.sendMessage(chatId, 'Federation not found or you are not the owner.');
     }
-    const federation = await Federation.findOne({ where: { id: chat.federationId } });
-    if (federation.ownerId !== userId) {
-      return bot.sendMessage(chatId, 'Only the federation owner can promote users.');
-    }
-    await FederationAdmin.upsert({ federationId: federation.id, userId: targetUserId });
-    bot.sendMessage(chatId, 'User promoted to federation admin successfully.');
+
+    await FederationAdmin.create({ federationId: fedId, userId: user.id });
+    await bot.sendMessage(chatId, `Successfully promoted ${user.username} to federation admin.`);
   } catch (error) {
-    console.error('Error promoting user:', error);
-    bot.sendMessage(chatId, 'Failed to promote user. Please try again later.');
+    console.error('Error promoting federation admin:', error);
+    await bot.sendMessage(chatId, 'Failed to promote federation admin. Please try again later.');
   }
 }
 
+// Handle /fdemote command
 async function handleFDemote(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const [targetUserId] = await extractUserAndReason(msg);
-  if (!targetUserId) {
-    return bot.sendMessage(chatId, 'Usage: /fdemote <user_id>');
+
+  const [_, username] = msg.text.split(' ');
+  const user = await bot.getChat(username);
+
+  if (!user) {
+    return bot.sendMessage(chatId, 'User not found.');
+  }
+
+  const fedId = await getFedIdFromChat(chatId);
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'This chat is not part of any federation.');
   }
 
   try {
-    const chat = await Chat.findOne({ where: { id: chatId } });
-    if (!chat || !chat.federationId) {
-      return bot.sendMessage(chatId, 'This chat is not part of any federation.');
+    const federation = await Federation.findOne({ where: { id: fedId, ownerId: userId } });
+    if (!federation) {
+      return bot.sendMessage(chatId, 'Federation not found or you are not the owner.');
     }
-    const federation = await Federation.findOne({ where: { id: chat.federationId } });
-    if (federation.ownerId !== userId) {
-      return bot.sendMessage(chatId, 'Only the federation owner can demote users.');
-    }
-    await FederationAdmin.destroy({ where: { federationId: federation.id, userId: targetUserId } });
-    bot.sendMessage(chatId, 'User demoted from federation admin successfully.');
+
+    await FederationAdmin.destroy({ where: { federationId: fedId, userId: user.id } });
+    await bot.sendMessage(chatId, `Successfully demoted ${user.username} from federation admin.`);
   } catch (error) {
-    console.error('Error demoting user:', error);
-    bot.sendMessage(chatId, 'Failed to demote user. Please try again later.');
+    console.error('Error demoting federation admin:', error);
+    await bot.sendMessage(chatId, 'Failed to demote federation admin. Please try again later.');
   }
 }
 
-// Handle commands
+// Handle /fban command
+async function handleFBan(bot, msg) {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  const [_, username, ...reasonParts] = msg.text.split(' ');
+  const user = await bot.getChat(username);
+  const reason = reasonParts.join(' ') || 'No reason provided';
+
+  if (!user) {
+    return bot.sendMessage(chatId, 'User not found.');
+  }
+
+  const fedId = await getFedIdFromChat(chatId);
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'This chat is not part of any federation.');
+  }
+
+  try {
+    const federation = await Federation.findOne({ where: { id: fedId } });
+    const admins = await FederationAdmin.findAll({ where: { federationId: fedId } });
+    const isAdmin = admins.some(admin => admin.userId === userId);
+
+    if (!isAdmin && federation.ownerId !== userId) {
+      return bot.sendMessage(chatId, 'You are not an admin of this federation.');
+    }
+
+    await FederationBan.create({ federationId: fedId, userId: user.id, reason });
+    const chats = await Chat.findAll({ where: { federationId: fedId } });
+
+    for (const chat of chats) {
+      try {
+        await bot.kickChatMember(chat.id, user.id);
+      } catch (err) {
+        console.error(`Error banning user in chat ${chat.id}:`, err);
+      }
+    }
+
+    await bot.sendMessage(chatId, `User ${user.username} banned from the federation for: ${reason}`);
+  } catch (error) {
+    console.error('Error banning user from federation:', error);
+    await bot.sendMessage(chatId, 'Failed to ban user from federation. Please try again later.');
+  }
+}
+
+// Handle /unfban command
+async function handleUnFBan(bot, msg) {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  const [_, username, ...reasonParts] = msg.text.split(' ');
+  const user = await bot.getChat(username);
+  const reason = reasonParts.join(' ') || 'No reason provided';
+
+  if (!user) {
+    return bot.sendMessage(chatId, 'User not found.');
+  }
+
+  const fedId = await getFedIdFromChat(chatId);
+  if (!fedId) {
+    return bot.sendMessage(chatId, 'This chat is not part of any federation.');
+  }
+
+  try {
+    const federation = await Federation.findOne({ where: { id: fedId } });
+    const admins = await FederationAdmin.findAll({ where: { federationId: fedId } });
+    const isAdmin = admins.some(admin => admin.userId === userId);
+
+    if (!isAdmin && federation.ownerId !== userId) {
+      return bot.sendMessage(chatId, 'You are not an admin of this federation.');
+    }
+
+    await FederationBan.destroy({ where: { federationId: fedId, userId: user.id } });
+    const chats = await Chat.findAll({ where: { federationId: fedId } });
+
+    for (const chat of chats) {
+      try {
+        await bot.unbanChatMember(chat.id, user.id);
+      } catch (err) {
+        console.error(`Error unbanning user in chat ${chat.id}:`, err);
+      }
+    }
+
+    await bot.sendMessage(chatId, `User ${user.username} unbanned from the federation.`);
+  } catch (error) {
+    console.error('Error unbanning user from federation:', error);
+    await bot.sendMessage(chatId, 'Failed to unban user from federation. Please try again later.');
+  }
+}
+
 async function handleCommands(bot, msg) {
-  if (!msg.text) return; // Ignore non-text messages
   const command = msg.text.split(' ')[0].toLowerCase();
 
   switch (command) {
@@ -584,33 +577,24 @@ async function handleCommands(bot, msg) {
     case '/fedadmins':
       await handleFedAdmins(bot, msg);
       break;
-    case '/fban':
-      await handleFBan(bot, msg);
-      break;
-    case '/unfban':
-      await handleUnFBan(bot, msg);
-      break;
-    case '/chatfed':
-      await handleChatFed(bot, msg);
-      break;
-    case '/fedchats':
-      await handleFedChats(bot, msg);
-      break;
-    case '/fbroadcast':
-      await handleFBroadcast(bot, msg);
-      break;
-    case '/fedstat':
-      await handleFedStat(bot, msg);
-      break;
     case '/fpromote':
       await handleFPromote(bot, msg);
       break;
     case '/fdemote':
       await handleFDemote(bot, msg);
       break;
+    case '/fban':
+      await handleFBan(bot, msg);
+      break;
+    case '/unfban':
+      await handleUnFBan(bot, msg);
+      break;
     default:
-      bot.sendMessage(msg.chat.id, 'Unknown command.');
+      await bot.sendMessage(msg.chat.id, 'Unknown command.');
   }
 }
 
-module.exports = { handleCommands, handleHelpCallback };
+module.exports = {
+  handleCommands,
+  handleHelpCallback,
+};
