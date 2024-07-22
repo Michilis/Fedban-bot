@@ -1,6 +1,7 @@
 const { User, Federation, FederationAdmin, FederationBan, Chat, Log } = require('./db');
 const { logGroupId } = require('./config');
 const { v4: uuidv4 } = require('uuid');
+const { helpMain, helpFedAdminCommands, helpFedOwnerCommands, helpUserCommands, startMessage } = require('./messages');
 
 // Extract user and reason utility function
 async function extractUserAndReason(msg) {
@@ -12,6 +13,62 @@ async function extractUserAndReason(msg) {
 }
 
 // Command Handlers
+async function handleStart(bot, msg) {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, startMessage);
+}
+
+async function handleHelp(bot, msg) {
+  const chatId = msg.chat.id;
+  const opts = {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: 'Fed Admin Commands', callback_data: 'help_fed_admin' },
+          { text: 'Federation Owner Commands', callback_data: 'help_fed_owner' }
+        ],
+        [{ text: 'User Commands', callback_data: 'help_user' }]
+      ]
+    }
+  };
+  bot.sendMessage(chatId, helpMain, opts);
+}
+
+async function handleHelpCallback(bot, query) {
+  let text;
+  const backButton = [{ text: 'Back', callback_data: 'help_main' }];
+  switch (query.data) {
+    case 'help_fed_admin':
+      text = helpFedAdminCommands;
+      break;
+    case 'help_fed_owner':
+      text = helpFedOwnerCommands;
+      break;
+    case 'help_user':
+      text = helpUserCommands;
+      break;
+    case 'help_main':
+      text = helpMain;
+      break;
+    default:
+      text = helpMain;
+  }
+  const opts = {
+    chat_id: query.message.chat.id,
+    message_id: query.message.message_id,
+    reply_markup: {
+      inline_keyboard: query.data === 'help_main' ? [
+        [
+          { text: 'Fed Admin Commands', callback_data: 'help_fed_admin' },
+          { text: 'Federation Owner Commands', callback_data: 'help_fed_owner' }
+        ],
+        [{ text: 'User Commands', callback_data: 'help_user' }]
+      ] : [backButton]
+    }
+  };
+  bot.editMessageText(text, opts);
+}
+
 async function handleNewFed(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
@@ -475,6 +532,12 @@ async function handleCommands(bot, msg) {
   const command = msg.text.split(' ')[0].toLowerCase();
 
   switch (command) {
+    case '/start':
+      await handleStart(bot, msg);
+      break;
+    case '/help':
+      await handleHelp(bot, msg);
+      break;
     case '/newfed':
       await handleNewFed(bot, msg);
       break;
@@ -537,4 +600,4 @@ async function handleCommands(bot, msg) {
   }
 }
 
-module.exports = { handleCommands };
+module.exports = { handleCommands, handleHelpCallback };
