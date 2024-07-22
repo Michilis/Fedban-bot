@@ -1,6 +1,11 @@
 const messages = require('../messages');
 
 async function handleHelpCallback(bot, message) {
+  if (message.chat.type !== 'private') {
+    await bot.sendMessage(message.chat.id, 'The help command is only available in direct messages with the bot.');
+    return;
+  }
+
   const opts = {
     chat_id: message.chat.id,
     message_id: message.message_id,
@@ -21,6 +26,11 @@ async function handleHelpCallback(bot, message) {
 }
 
 async function handleHelpSectionCallback(bot, message, section) {
+  if (message.chat.type !== 'private') {
+    await bot.sendMessage(message.chat.id, 'The help command is only available in direct messages with the bot.');
+    return;
+  }
+
   const sectionMessage = messages.helpMenu[section];
   const opts = {
     chat_id: message.chat.id,
