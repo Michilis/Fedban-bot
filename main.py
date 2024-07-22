@@ -1,46 +1,49 @@
-import os
+import logging
 import asyncio
-from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackContext
+from telegram.ext import ApplicationBuilder, CallbackContext, CommandHandler
 from modules import federation, help
+from dotenv import load_dotenv
+import os
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Get configuration values
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID"))
 DATABASE_URL = os.getenv("DATABASE_URL")
+LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID"))
 
-# Debug prints
-print(f"BOT_TOKEN: {BOT_TOKEN}")
-print(f"DATABASE_URL: {DATABASE_URL}")
-print(f"LOG_GROUP_ID: {LOG_GROUP_ID}")
+# Configure logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
-# Check if BOT_TOKEN is loaded correctly
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN is not set. Please check your .env file.")
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text("Hello! I'm the Fedban Bot. How can I help you today?")
 
-# Initialize the Telegram Bot
-app = ApplicationBuilder().token(BOT_TOKEN).build()
+async def error_handler(update: Update, context: CallbackContext) -> None:
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
+    await update.message.reply_text('An error occurred. Please try again later.')
 
-async def start_bot():
+async def init_db():
     await federation.init_db(DATABASE_URL)
-    print("Bot started successfully!")
 
-    # Add handlers for federation commands
-    app.add_handler(CommandHandler("newfed", federation.new_fed))
-    app.add_handler(CommandHandler("joinfed", federation.join_fed))
-    app.add_handler(CommandHandler("leavefed", federation.leave_fed))
-    app.add_handler(CommandHandler("renamefed", federation.rename_fed))
-    app.add_handler(CommandHandler("fedinfo", federation.info_feds))
+def main() -> None:
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Add handler for help command
-    app.add_handler(CommandHandler("help", help.help_menu))
+    application.add_handler(CommandHandler("start", start))
+    help.register_help_handlers(application)
+    federation.register_federation_handlers(application)
 
-    await app.start_polling()
-    await app.idle()
+    application.add_error_handler(error_handler)
+
+    # Initialize database connection pool before starting the bot
+    asyncio.run(init_db())
+
+    logger.info("Starting bot...")
+    application.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(start_bot())
+    main()
