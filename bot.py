@@ -1,6 +1,6 @@
 import os
 import logging
-from pyrogram import Client
+from pyrogram import Client, filters
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 app = Client("fedban_bot", bot_token=os.getenv("BOT_TOKEN"))
 
 # Import all modules
-from wbb.modules import admin, karma
+from wbb.modules import admin, karma, fedban
 from wbb.core.decorators.errors import capture_err
 from wbb.core.decorators.permissions import adminsOnly
 
