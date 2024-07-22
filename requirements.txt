@@ -1,3 +1,4 @@
 pyrogram==2.0.30
 tgcrypto==1.2.3
 python-dotenv==1.0.0
+asyncpg==0.26.0
