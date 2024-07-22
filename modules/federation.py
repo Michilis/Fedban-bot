@@ -1,5 +1,5 @@
 import uuid
-import time
+import datetime
 import asyncpg
 from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
@@ -10,23 +10,6 @@ LOG_GROUP_ID = None
 async def init_db(database_url):
     global pool
     pool = await asyncpg.create_pool(database_url)
-    
-    async with pool.acquire() as conn:
-        await conn.execute('''
-            CREATE TABLE IF NOT EXISTS federations (
-                fed_id UUID PRIMARY KEY,
-                fed_name TEXT NOT NULL,
-                owner_id BIGINT NOT NULL,
-                created_time TIMESTAMP DEFAULT NOW()
-            )
-        ''')
-        await conn.execute('''
-            CREATE TABLE IF NOT EXISTS federation_chats (
-                chat_id BIGINT PRIMARY KEY,
-                chat_title TEXT NOT NULL,
-                fed_id UUID REFERENCES federations(fed_id)
-            )
-        ''')
 
 async def new_fed(update: Update, context: CallbackContext) -> None:
     if update.message.chat.type != 'private':
@@ -39,7 +22,7 @@ async def new_fed(update: Update, context: CallbackContext) -> None:
     fed_id = str(uuid.uuid4())
     owner_id = update.message.from_user.id
     uname = update.message.from_user.mention_html()
-    created_time = time.ctime()
+    created_time = datetime.datetime.now()
 
     async with pool.acquire() as conn:
         await conn.execute('''
@@ -57,8 +40,8 @@ async def new_fed(update: Update, context: CallbackContext) -> None:
 
 Use this ID to join federation! eg:<code> /joinfed {fed_id}</code>''', parse_mode='HTML')
 
-    await context.bot.send_message(chat_id=LOG_GROUP_ID, text=f'''
-<b>New Federation created with FedID:</b>
+    context.bot.send_message(chat_id=LOG_GROUP_ID, text=f'''
+<b> New Federation created with FedID: </b>
 
 <b>Name:</b> {fed_name}
 <b>ID:</b> <code>{fed_id}</code>
@@ -171,7 +154,6 @@ async def info_feds(update: Update, context: CallbackContext) -> None:
 <b>ID:</b> <code>{fed_id}</code>
 <b>Chats in the fed:</b> {len(chats)}''', parse_mode='HTML')
 
-# Register federation handlers
 def register_federation_handlers(app):
     app.add_handler(CommandHandler("newfed", new_fed))
     app.add_handler(CommandHandler("joinfed", join_fed))
