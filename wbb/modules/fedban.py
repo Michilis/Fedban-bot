@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from wbb import app
 from wbb.core.decorators.errors import capture_err
 from wbb.utils.dbfunctions import (
@@ -15,6 +14,8 @@ from wbb.utils.dbfunctions import (
     create_federation,
     delete_federation,
     transfer_federation_ownership,
+    update_federation_name,
+    get_groups_in_federation
 )
 
 __MODULE__ = "Fedban"
@@ -24,8 +25,8 @@ __HELP__ = """
 /fedtransfer <@username> <federation_id> - Transfer federation ownership
 /myfeds - List federations created by the user
 /renamefed <federation_id> <new_name> - Rename a federation
-/addgroup - Add the current group to a federation
-/removegroup - Remove the current group from a federation
+/addgroup <federation_id> - Add the current group to a federation
+/removegroup <federation_id> - Remove the current group from a federation
 /fban <user_id> - Ban a user in all federated groups
 /unfban <user_id> - Unban a user in all federated groups
 /fedinfo <federation_id> - Get information about a federation
@@ -76,13 +77,13 @@ async def fed_transfer(client, message):
         return await message.reply_text("Usage: /fedtransfer <@username> <federation_id>")
     
     new_owner_username, federation_id = message.command[1], message.command[2]
-    new_owner_id = await app.get_users(new_owner_username)
+    new_owner_id = (await app.get_users(new_owner_username)).id
     
     federation_info = await get_federation_info(federation_id)
     if federation_info["owner_id"] != user.id:
         return await message.reply_text("Only the federation owner can transfer ownership.")
     
-    await transfer_federation_ownership(federation_id, new_owner_id.id)
+    await transfer_federation_ownership(federation_id, new_owner_id)
     await message.reply_text(f"Federation ownership transferred to {new_owner_username}.")
 
 # List federations created by the user
