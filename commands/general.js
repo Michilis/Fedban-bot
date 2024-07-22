@@ -10,6 +10,11 @@ async function handleStart(bot, msg) {
 }
 
 async function handleHelp(bot, msg) {
+  if (msg.chat.type !== 'private') {
+    await bot.sendMessage(msg.chat.id, 'The /help command is only available in direct messages with the bot.');
+    return;
+  }
+
   const opts = {
     reply_markup: {
       inline_keyboard: [
