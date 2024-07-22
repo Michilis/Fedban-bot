@@ -1,7 +1,6 @@
 import os
 
 class Config:
-    API_ID = os.getenv("API_ID", "your_api_id")
-    API_HASH = os.getenv("API_HASH", "your_api_hash")
     BOT_TOKEN = os.getenv("BOT_TOKEN", "your_bot_token")
-    LOG_GROUP_ID = os.getenv("LOG_GROUP_ID", "your_log_group_id")
+    LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID", -1001234567890))
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://username:password@localhost/dbname")
