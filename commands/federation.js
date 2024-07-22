@@ -1,115 +1,41 @@
-const { Federation, Chat } = require('../db');
+const { Federation } = require('../db');
+const messages = require('../messages');
 
 async function handleNewFed(bot, msg) {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  const fedName = msg.text.split(' ').slice(1).join(' ');
-
-  if (!fedName) {
-    return bot.sendMessage(chatId, 'Please provide a federation name.');
+  const args = msg.text.split(' ').slice(1);
+  if (args.length === 0) {
+    await bot.sendMessage(msg.chat.id, 'Please provide a name for the new federation.');
+    return;
   }
-
+  const name = args.join(' ');
   try {
-    const newFed = await Federation.create({ name: fedName, ownerId: userId });
-    await bot.sendMessage(chatId, `Federation created: ${newFed.name} (ID: ${newFed.id})`);
+    const federation = await Federation.create({ name, ownerId: msg.from.id });
+    await bot.sendMessage(msg.chat.id, `Federation created with ID: ${federation.id}`);
   } catch (error) {
     console.error('Error creating federation:', error);
-    await bot.sendMessage(chatId, 'Failed to create federation. Please try again later.');
+    await bot.sendMessage(msg.chat.id, 'Error creating federation.');
   }
-}
-
-async function handleDelFed(bot, msg) {
-  // Implement the federation deletion logic here
-}
-
-async function handleFedTransfer(bot, msg) {
-  // Implement the federation transfer logic here
 }
 
 async function handleMyFeds(bot, msg) {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-
   try {
-    const federations = await Federation.findAll({ where: { ownerId: userId } });
+    const federations = await Federation.findAll({ where: { ownerId: msg.from.id } });
     if (federations.length === 0) {
-      return bot.sendMessage(chatId, 'You do not own any federations.');
+      await bot.sendMessage(msg.chat.id, 'You do not own any federations.');
+    } else {
+      const federationList = federations.map(fed => `ID: ${fed.id}, Name: ${fed.name}`).join('\n');
+      await bot.sendMessage(msg.chat.id, `Your federations:\n${federationList}`);
     }
-
-    const response = federations.map(fed => `Name: ${fed.name}, ID: ${fed.id}`).join('\n');
-    await bot.sendMessage(chatId, `Your Federations:\n${response}`);
   } catch (error) {
     console.error('Error fetching federations:', error);
-    await bot.sendMessage(chatId, 'Failed to fetch federations. Please try again later.');
+    await bot.sendMessage(msg.chat.id, 'Error fetching federations.');
   }
 }
 
-async function handleRenameFed(bot, msg) {
-  // Implement the federation rename logic here
-}
-
-async function handleSetFedLog(bot, msg) {
-  // Implement the set federation log logic here
-}
-
-async function handleUnsetFedLog(bot, msg) {
-  // Implement the unset federation log logic here
-}
-
-async function handleJoinFed(bot, msg) {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-
-  if (msg.chat.type !== 'supergroup') {
-    return bot.sendMessage(chatId, 'Only supergroups can join federations.');
-  }
-
-  const fedId = msg.text.split(' ')[1];
-  if (!fedId) {
-    return bot.sendMessage(chatId, 'Please provide the federation ID.');
-  }
-
-  try {
-    const federation = await Federation.findOne({ where: { id: fedId } });
-    if (!federation) {
-      return bot.sendMessage(chatId, 'Federation not found.');
-    }
-
-    const chatMember = await bot.getChatMember(chatId, userId);
-    if (chatMember.status !== 'creator') {
-      return bot.sendMessage(chatId, 'Only the group creator can join the federation.');
-    }
-
-    await Chat.upsert({ id: chatId, title: msg.chat.title, federationId: fedId });
-    await bot.sendMessage(chatId, `Successfully joined the "${federation.name}" federation!`);
-  } catch (error) {
-    console.error('Error joining federation:', error);
-    await bot.sendMessage(chatId, 'Failed to join federation. Please try again later.');
-  }
-}
-
-async function handleLeaveFed(bot, msg) {
-  // Implement the federation leave logic here
-}
-
-async function handleFedInfo(bot, msg) {
-  // Implement the federation info logic here
-}
-
-async function handleFedAdmins(bot, msg) {
-  // Implement the federation admins logic here
-}
+// Implement other federation commands like handleJoinFed, handleLeaveFed, handleFedInfo, handleFedAdmins similarly
 
 module.exports = {
   handleNewFed,
-  handleDelFed,
-  handleFedTransfer,
   handleMyFeds,
-  handleRenameFed,
-  handleSetFedLog,
-  handleUnsetFedLog,
-  handleJoinFed,
-  handleLeaveFed,
-  handleFedInfo,
-  handleFedAdmins,
+  // Export other handlers like handleJoinFed, handleLeaveFed, handleFedInfo, handleFedAdmins
 };
