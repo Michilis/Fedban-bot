@@ -12,7 +12,12 @@ async function handleHelpCallback(bot, message) {
       ]
     }
   };
-  await bot.editMessageText(messages.helpMenu.main, opts);
+  try {
+    await bot.editMessageText(messages.helpMenu.main, opts);
+  } catch (error) {
+    console.error('Error handling help callback:', error);
+    await bot.sendMessage(message.chat.id, 'An error occurred while processing the help command.');
+  }
 }
 
 async function handleHelpSectionCallback(bot, message, section) {
@@ -26,7 +31,12 @@ async function handleHelpSectionCallback(bot, message, section) {
       ]
     }
   };
-  await bot.editMessageText(sectionMessage, opts);
+  try {
+    await bot.editMessageText(sectionMessage, opts);
+  } catch (error) {
+    console.error('Error handling help section callback:', error);
+    await bot.sendMessage(message.chat.id, 'An error occurred while processing the help command.');
+  }
 }
 
 module.exports = {
