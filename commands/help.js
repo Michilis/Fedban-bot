@@ -1,18 +1,4 @@
 const messages = require('../messages');
-const { handleHelpCallback, handleHelpSectionCallback } = require('./callbacks');
-
-async function handleHelp(bot, msg) {
-  const opts = {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: 'Admin Commands', callback_data: 'help_admin' }],
-        [{ text: 'Owner Commands', callback_data: 'help_owner' }],
-        [{ text: 'User Commands', callback_data: 'help_user' }]
-      ]
-    }
-  };
-  await bot.sendMessage(msg.chat.id, messages.helpMenu.main, opts);
-}
 
 async function handleHelpCallback(bot, message) {
   const opts = {
@@ -44,7 +30,6 @@ async function handleHelpSectionCallback(bot, message, section) {
 }
 
 module.exports = {
-  handleHelp,
   handleHelpCallback,
   handleHelpSectionCallback
 };
