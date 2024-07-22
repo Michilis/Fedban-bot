@@ -25,6 +25,7 @@ async def start_bot():
     app.add_handler(filters.command("joinfed"), federation.join_fed)
     app.add_handler(filters.command("leavefed"), federation.leave_fed)
     app.add_handler(filters.command("renamefed"), federation.rename_fed)
+    app.add_handler(filters.command("fedinfo"), federation.info_feds)
 
     # Add handler for help command
     app.add_handler(filters.command("help"), help.help_menu)
