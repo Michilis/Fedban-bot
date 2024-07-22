@@ -2,7 +2,7 @@ import asyncio
 import logging
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
-from wbb import app, SUDOERS
+from wbb import app
 from wbb.core.decorators.errors import capture_err
 from wbb.utils.dbfunctions import (
     add_fedban_user,
@@ -61,7 +61,7 @@ async def del_fed(client, message):
     federation_id = message.command[1]
     federation_info = await get_federation_info(federation_id)
     
-    if federation_info["owner_id"] != user.id and user.id not in SUDOERS:
+    if federation_info["owner_id"] != user.id:
         return await message.reply_text("Only the federation owner can delete it.")
     
     await delete_federation(federation_id)
@@ -79,7 +79,7 @@ async def fed_transfer(client, message):
     new_owner_id = await app.get_users(new_owner_username)
     
     federation_info = await get_federation_info(federation_id)
-    if federation_info["owner_id"] != user.id and user.id not in SUDOERS:
+    if federation_info["owner_id"] != user.id:
         return await message.reply_text("Only the federation owner can transfer ownership.")
     
     await transfer_federation_ownership(federation_id, new_owner_id.id)
@@ -112,7 +112,7 @@ async def rename_fed(client, message):
     federation_id, new_name = message.command[1], message.command[2]
     federation_info = await get_federation_info(federation_id)
     
-    if federation_info["owner_id"] != user.id and user.id not in SUDOERS:
+    if federation_info["owner_id"] != user.id:
         return await message.reply_text("Only the federation owner can rename it.")
     
     await update_federation_name(federation_id, new_name)
@@ -131,7 +131,7 @@ async def add_group(client, message):
     federation_id = message.command[1]
     federation_info = await get_federation_info(federation_id)
     
-    if federation_info["owner_id"] != user.id and user.id not in SUDOERS:
+    if federation_info["owner_id"] != user.id:
         return await message.reply_text("Only the federation owner can add groups to it.")
     
     await add_group_to_federation(federation_id, chat_id)
@@ -150,7 +150,7 @@ async def remove_group(client, message):
     federation_id = message.command[1]
     federation_info = await get_federation_info(federation_id)
     
-    if federation_info["owner_id"] != user.id and user.id not in SUDOERS:
+    if federation_info["owner_id"] != user.id:
         return await message.reply_text("Only the federation owner can remove groups from it.")
     
     await remove_group_from_federation(federation_id, chat_id)
