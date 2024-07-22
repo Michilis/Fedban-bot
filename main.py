@@ -43,7 +43,9 @@ async def start_bot():
     logger.info("Starting bot...")
     logger.info("Bot started, now polling updates...")
 
-    application.run_polling()
+    await application.start()
+    await application.updater.start_polling()
+    await application.updater.stop()
 
 if __name__ == "__main__":
     try:
