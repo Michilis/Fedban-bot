@@ -25,7 +25,7 @@ def capture_err(func):
     @wraps(func)
     async def capture(client, message, *args, **kwargs):
         try:
-            return await func(client, message, *args, *kwargs)
+            return await func(client, message, *args, **kwargs)
         except ChatWriteForbidden:
             await app.leave_chat(message.chat.id)
             return
