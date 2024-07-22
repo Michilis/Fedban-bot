@@ -2,6 +2,7 @@ const { User, Federation, FederationAdmin, FederationBan, Chat, Log } = require(
 const { logGroupId } = require('./config');
 const { v4: uuidv4 } = require('uuid');
 const { helpMain, helpFedAdminCommands, helpFedOwnerCommands, helpUserCommands, startMessage } = require('./messages');
+const TelegramBot = require('node-telegram-bot-api');
 
 // Extract user and reason utility function
 async function extractUserAndReason(msg) {
