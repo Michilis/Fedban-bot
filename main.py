@@ -18,4 +18,7 @@ app.add_handler(filters.command("renamefed"), federation.rename_fed)
 # Add handler for help command
 app.add_handler(filters.command("help"), help.help_menu)
 
+# Register help menu handlers
+help.register_help_handlers(app)
+
 app.run()
