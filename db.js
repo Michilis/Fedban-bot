@@ -1,49 +1,43 @@
 const { Sequelize, DataTypes } = require('sequelize');
+require('dotenv').config();
 
-// Set up the Sequelize instance
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
+  protocol: 'postgres',
   logging: false,
 });
 
-// Define the User model
 const User = sequelize.define('User', {
   id: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     primaryKey: true,
   },
   username: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-}, {
-  timestamps: true,
 });
 
-// Define the Federation model
 const Federation = sequelize.define('Federation', {
   id: {
     type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
+    defaultValue: DataTypes.UUIDV4,
   },
   name: {
     type: DataTypes.STRING,
     allowNull: false,
   },
   ownerId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: false,
   },
   logChannelId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
-}, {
-  timestamps: true,
 });
 
-// Define the Chat model
 const Chat = sequelize.define('Chat', {
   id: {
     type: DataTypes.BIGINT,
@@ -57,52 +51,54 @@ const Chat = sequelize.define('Chat', {
     type: DataTypes.UUID,
     allowNull: true,
   },
-}, {
-  timestamps: true,
 });
 
-// Define the FederationAdmin model
 const FederationAdmin = sequelize.define('FederationAdmin', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
   federationId: {
     type: DataTypes.UUID,
     allowNull: false,
-    primaryKey: true,
   },
   userId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: false,
-    primaryKey: true,
   },
-}, {
-  timestamps: true,
 });
 
-// Define the FederationBan model
 const FederationBan = sequelize.define('FederationBan', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
   federationId: {
     type: DataTypes.UUID,
     allowNull: false,
-    primaryKey: true,
   },
   userId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: false,
-    primaryKey: true,
   },
   reason: {
-    type: DataTypes.TEXT,
-    allowNull: true,
+    type: DataTypes.STRING,
+    allowNull: false,
   },
-}, {
-  timestamps: true,
 });
 
-// Sync all models
-sequelize.sync().then(() => {
-  console.log('Database & tables created!');
-}).catch(err => {
-  console.error('Error creating database:', err);
-});
+const connectDb = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Database connected.');
+    await sequelize.sync({ force: true });
+    console.log('Database & tables created!');
+  } catch (error) {
+    console.error('Error connecting to the database:', error);
+  }
+};
 
 module.exports = {
   sequelize,
@@ -111,4 +107,5 @@ module.exports = {
   Chat,
   FederationAdmin,
   FederationBan,
+  connectDb,
 };
