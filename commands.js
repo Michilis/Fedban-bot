@@ -261,8 +261,13 @@ async function handleJoinFed(bot, msg) {
     if (!federation) {
       return bot.sendMessage(chatId, 'Federation not found.');
     }
+    const chatCreator = await bot.getChatAdministrators(chatId);
+    const isCreator = chatCreator.some(admin => admin.user.id === userId && admin.status === 'creator');
+    if (!isCreator) {
+      return bot.sendMessage(chatId, 'Only the group creator can join a federation.');
+    }
     await Chat.upsert({ id: chatId, title: msg.chat.title, federationId });
-    bot.sendMessage(chatId, 'Chat joined federation successfully.');
+    bot.sendMessage(chatId, `Successfully joined the "${federation.name}" federation!`);
   } catch (error) {
     console.error('Error joining federation:', error);
     bot.sendMessage(chatId, 'Failed to join federation. Please try again later.');
@@ -272,19 +277,25 @@ async function handleJoinFed(bot, msg) {
 async function handleLeaveFed(bot, msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
+  const args = msg.text.split(' ');
+  if (args.length < 2) {
+    return bot.sendMessage(chatId, 'Usage: /leavefed <federation_id>');
+  }
+  const federationId = args[1].trim();
 
   try {
     const chat = await Chat.findOne({ where: { id: chatId } });
-    if (!chat || !chat.federationId) {
-      return bot.sendMessage(chatId, 'This chat is not part of any federation.');
+    if (!chat || chat.federationId !== federationId) {
+      return bot.sendMessage(chatId, 'This chat is not part of the specified federation.');
     }
-    const federation = await Federation.findOne({ where: { id: chat.federationId } });
-    if (federation.ownerId !== userId) {
-      return bot.sendMessage(chatId, 'Only the group owner can leave the federation.');
+    const chatCreator = await bot.getChatAdministrators(chatId);
+    const isCreator = chatCreator.some(admin => admin.user.id === userId && admin.status === 'creator');
+    if (!isCreator) {
+      return bot.sendMessage(chatId, 'Only the group creator can leave a federation.');
     }
     chat.federationId = null;
     await chat.save();
-    bot.sendMessage(chatId, 'Chat left federation successfully.');
+    bot.sendMessage(chatId, `Successfully left the "${federationId}" federation!`);
   } catch (error) {
     console.error('Error leaving federation:', error);
     bot.sendMessage(chatId, 'Failed to leave federation. Please try again later.');
