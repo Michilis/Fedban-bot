@@ -1,4 +1,4 @@
-python-telegram-bot
-pyrogram
-dotenv
-asyncpg
+pyrogram==1.4.16
+tgcrypto==1.2.3
+asyncpg==0.23.0
+python-dotenv==0.19.2
