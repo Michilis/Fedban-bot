@@ -1,43 +1,112 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const config = require('./config');
 
-const sequelize = new Sequelize(config.databaseUrl, {
+// Set up the Sequelize instance
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
+  logging: false,
 });
 
+// Define the User model
 const User = sequelize.define('User', {
-  id: { type: DataTypes.INTEGER, primaryKey: true },
-  username: DataTypes.STRING,
+  id: {
+    type: DataTypes.BIGINT,
+    primaryKey: true,
+  },
+  username: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+}, {
+  timestamps: true,
 });
 
+// Define the Federation model
 const Federation = sequelize.define('Federation', {
-  id: { type: DataTypes.UUID, primaryKey: true, defaultValue: Sequelize.UUIDV4 },
-  name: DataTypes.STRING,
-  ownerId: DataTypes.INTEGER,
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  ownerId: {
+    type: DataTypes.BIGINT,
+    allowNull: false,
+  },
+  logChannelId: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+  },
+}, {
+  timestamps: true,
 });
 
-const FederationAdmin = sequelize.define('FederationAdmin', {
-  federationId: { type: DataTypes.UUID, references: { model: Federation, key: 'id' } },
-  userId: { type: DataTypes.INTEGER, references: { model: User, key: 'id' } },
-});
-
-const FederationBan = sequelize.define('FederationBan', {
-  federationId: { type: DataTypes.UUID, references: { model: Federation, key: 'id' } },
-  userId: { type: DataTypes.INTEGER, references: { model: User, key: 'id' } },
-  reason: DataTypes.STRING,
-});
-
+// Define the Chat model
 const Chat = sequelize.define('Chat', {
-  id: { type: DataTypes.INTEGER, primaryKey: true },
-  title: DataTypes.STRING,
-  federationId: { type: DataTypes.UUID, references: { model: Federation, key: 'id' } },
+  id: {
+    type: DataTypes.BIGINT,
+    primaryKey: true,
+  },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  federationId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+  },
+}, {
+  timestamps: true,
 });
 
-const Log = sequelize.define('Log', {
-  federationId: { type: DataTypes.UUID, references: { model: Federation, key: 'id' } },
-  message: DataTypes.STRING,
+// Define the FederationAdmin model
+const FederationAdmin = sequelize.define('FederationAdmin', {
+  federationId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    primaryKey: true,
+  },
+  userId: {
+    type: DataTypes.BIGINT,
+    allowNull: false,
+    primaryKey: true,
+  },
+}, {
+  timestamps: true,
 });
 
-sequelize.sync();
+// Define the FederationBan model
+const FederationBan = sequelize.define('FederationBan', {
+  federationId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    primaryKey: true,
+  },
+  userId: {
+    type: DataTypes.BIGINT,
+    allowNull: false,
+    primaryKey: true,
+  },
+  reason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+}, {
+  timestamps: true,
+});
 
-module.exports = { User, Federation, FederationAdmin, FederationBan, Chat, Log, sequelize };
+// Sync all models
+sequelize.sync().then(() => {
+  console.log('Database & tables created!');
+});
+
+module.exports = {
+  sequelize,
+  User,
+  Federation,
+  Chat,
+  FederationAdmin,
+  FederationBan,
+};
