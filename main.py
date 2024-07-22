@@ -46,9 +46,12 @@ async def start_bot():
 
     await application.start()
     await application.updater.start_polling()
-    
-    # Keep the application running until interrupted
-    await application.running.wait()
+
+    # Keep the bot running
+    try:
+        await asyncio.Event().wait()
+    except (KeyboardInterrupt, SystemExit):
+        pass
 
     await application.stop()
     await application.shutdown()
