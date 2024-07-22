@@ -17,8 +17,6 @@ A Telegram bot to manage federations and ban users across multiple groups.
    ```bash
    git clone https://github.com/yourusername/fedban-bot.git
    cd fedban-bot
-
-    cd FedbanBot
     ```
 
 2. Create a `.env` file and add your bot token
