@@ -30,7 +30,7 @@ async def error_handler(update: Update, context: CallbackContext) -> None:
 async def init_db():
     await federation.init_db(DATABASE_URL)
 
-def main() -> None:
+async def start_bot():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -39,11 +39,18 @@ def main() -> None:
 
     application.add_error_handler(error_handler)
 
-    # Initialize database connection pool before starting the bot
-    asyncio.run(init_db())
+    await init_db()
 
     logger.info("Starting bot...")
-    application.run_polling()
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    await application.updater.idle()
+
+def main() -> None:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(start_bot())
 
 if __name__ == "__main__":
     main()
