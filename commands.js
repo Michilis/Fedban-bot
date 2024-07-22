@@ -530,6 +530,7 @@ async function handleFDemote(bot, msg) {
 
 // Handle commands
 async function handleCommands(bot, msg) {
+  if (!msg.text) return; // Ignore non-text messages
   const command = msg.text.split(' ')[0].toLowerCase();
 
   switch (command) {
