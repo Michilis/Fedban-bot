@@ -100,6 +100,8 @@ const FederationBan = sequelize.define('FederationBan', {
 // Sync all models
 sequelize.sync().then(() => {
   console.log('Database & tables created!');
+}).catch(err => {
+  console.error('Error creating database:', err);
 });
 
 module.exports = {
