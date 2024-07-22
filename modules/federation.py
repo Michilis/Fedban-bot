@@ -2,8 +2,8 @@ import asyncio
 import uuid
 import asyncpg
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ChatType, ChatMemberStatus
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config import Config
 
 async def init_db():
