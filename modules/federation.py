@@ -1,52 +1,147 @@
 import asyncio
 import uuid
+import asyncpg
 from pyrogram import filters
 from pyrogram.enums import ChatType, ChatMemberStatus
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config import Config
 
-# Placeholders for the database functions
-def new_fed_db(fed_name, fed_id, created_time, owner_id):
-    pass
+async def init_db():
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    await conn.execute('''
+        CREATE TABLE IF NOT EXISTS federations (
+            fed_id UUID PRIMARY KEY,
+            fed_name TEXT,
+            created_time TIMESTAMP,
+            owner_id BIGINT
+        )
+    ''')
+    await conn.execute('''
+        CREATE TABLE IF NOT EXISTS chats (
+            chat_id BIGINT PRIMARY KEY,
+            chat_title TEXT,
+            fed_id UUID REFERENCES federations(fed_id)
+        )
+    ''')
+    await conn.execute('''
+        CREATE TABLE IF NOT EXISTS fedbans (
+            fed_id UUID REFERENCES federations(fed_id),
+            user_id BIGINT,
+            reason TEXT,
+            PRIMARY KEY (fed_id, user_id)
+        )
+    ''')
+    await conn.close()
 
-def join_fed_db(chat_id, chat_title, fed_id):
-    pass
+async def new_fed_db(fed_name, fed_id, created_time, owner_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    await conn.execute('''
+        INSERT INTO federations (fed_id, fed_name, created_time, owner_id) VALUES ($1, $2, $3, $4)
+    ''', fed_id, fed_name, created_time, owner_id)
+    await conn.close()
 
-def leave_fed_db(chat_id, chat_title, fed_id):
-    pass
+async def join_fed_db(chat_id, chat_title, fed_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    await conn.execute('''
+        INSERT INTO chats (chat_id, chat_title, fed_id) VALUES ($1, $2, $3)
+    ''', chat_id, chat_title, fed_id)
+    await conn.close()
 
-def rename_fed_db(owner_id, fed_name):
-    pass
+async def leave_fed_db(chat_id, chat_title, fed_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    await conn.execute('''
+        DELETE FROM chats WHERE chat_id=$1 AND fed_id=$2
+    ''', chat_id, fed_id)
+    await conn.close()
 
-def get_fed_name(fed_id=None, owner_id=None):
-    pass
+async def rename_fed_db(owner_id, fed_name):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    await conn.execute('''
+        UPDATE federations SET fed_name=$1 WHERE owner_id=$2
+    ''', fed_name, owner_id)
+    await conn.close()
 
-def get_fed_info(fed_id):
-    pass
+async def get_fed_name(fed_id=None, owner_id=None):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    if fed_id:
+        row = await conn.fetchrow('''
+            SELECT fed_name FROM federations WHERE fed_id=$1
+        ''', fed_id)
+    else:
+        row = await conn.fetchrow('''
+            SELECT fed_name FROM federations WHERE owner_id=$1
+        ''', owner_id)
+    await conn.close()
+    return row['fed_name'] if row else None
 
-def get_fed_admins(fed_id):
-    pass
+async def get_fed_info(fed_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    row = await conn.fetchrow('''
+        SELECT * FROM federations WHERE fed_id=$1
+    ''', fed_id)
+    await conn.close()
+    return row
 
-def get_connected_chats(fed_id):
-    pass
+async def get_fed_admins(fed_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    rows = await conn.fetch('''
+        SELECT owner_id FROM federations WHERE fed_id=$1
+    ''', fed_id)
+    await conn.close()
+    return [row['owner_id'] for row in rows]
 
-def is_fed_exist(fed_id):
-    pass
+async def get_connected_chats(fed_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    rows = await conn.fetch('''
+        SELECT chat_id FROM chats WHERE fed_id=$1
+    ''', fed_id)
+    await conn.close()
+    return [row['chat_id'] for row in rows]
 
-def is_user_fban(fed_id, user_id):
-    pass
+async def is_fed_exist(fed_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    row = await conn.fetchrow('''
+        SELECT fed_id FROM federations WHERE fed_id=$1
+    ''', fed_id)
+    await conn.close()
+    return bool(row)
 
-def get_fed_reason(fed_id, user_id):
-    pass
+async def is_user_fban(fed_id, user_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    row = await conn.fetchrow('''
+        SELECT user_id FROM fedbans WHERE fed_id=$1 AND user_id=$2
+    ''', fed_id, user_id)
+    await conn.close()
+    return bool(row)
 
-def update_reason(fed_id, user_id, reason):
-    pass
+async def get_fed_reason(fed_id, user_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    row = await conn.fetchrow('''
+        SELECT reason FROM fedbans WHERE fed_id=$1 AND user_id=$2
+    ''', fed_id, user_id)
+    await conn.close()
+    return row['reason'] if row else None
 
-def user_fban(fed_id, user_id, reason):
-    pass
+async def update_reason(fed_id, user_id, reason):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    await conn.execute('''
+        UPDATE fedbans SET reason=$1 WHERE fed_id=$2 AND user_id=$3
+    ''', reason, fed_id, user_id)
+    await conn.close()
 
-def user_unfban(fed_id, user_id):
-    pass
+async def user_fban(fed_id, user_id, reason):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    await conn.execute('''
+        INSERT INTO fedbans (fed_id, user_id, reason) VALUES ($1, $2, $3)
+    ''', fed_id, user_id, reason)
+    await conn.close()
+
+async def user_unfban(fed_id, user_id):
+    conn = await asyncpg.connect(Config.DATABASE_URL)
+    await conn.execute('''
+        DELETE FROM fedbans WHERE fed_id=$1 AND user_id=$2
+    ''', fed_id, user_id)
+    await conn.close()
 
 async def new_fed(client, message):
     if message.chat.type == ChatType.PRIVATE:
@@ -57,7 +152,7 @@ async def new_fed(client, message):
         fed_id = str(uuid.uuid4())
         owner_id = message.from_user.id
         created_time = message.date.strftime('%Y-%m-%d %H:%M:%S')
-        new_fed_db(fed_name, fed_id, created_time, owner_id)
+        await new_fed_db(fed_name, fed_id, created_time, owner_id)
         
         await message.reply_text(
             f"**Congrats, you have successfully created a federation!**\n\n"
@@ -90,7 +185,7 @@ async def join_fed(client, message):
         return await message.reply_text("You need to specify which federation you're asking about by giving me a FedID!")
     
     fed_id = message.command[1]
-    if not is_fed_exist(fed_id):
+    if not await is_fed_exist(fed_id):
         return await message.reply_text("This FedID does not refer to an existing federation.")
     
     st = await client.get_chat_member(chat_id, user_id)
@@ -98,8 +193,8 @@ async def join_fed(client, message):
         return await message.reply_text("Only Group Creator can join new fed!")
     
     chat_title = message.chat.title
-    join_fed_db(chat_id, chat_title, fed_id)
-    fed_name = get_fed_name(fed_id)
+    await join_fed_db(chat_id, chat_title, fed_id)
+    fed_name = await get_fed_name(fed_id=fed_id)
     
     await message.reply_text(f'Successfully joined the "{fed_name}" federation!')
 
@@ -113,7 +208,7 @@ async def leave_fed(client, message):
         return await message.reply_text("You need to specify which federation you're asking about by giving me a FedID!")
     
     fed_id = message.command[1]
-    if not is_fed_exist(fed_id):
+    if not await is_fed_exist(fed_id):
         return await message.reply_text("This FedID does not refer to an existing federation.")
     
     st = await client.get_chat_member(chat_id, user_id)
@@ -121,8 +216,8 @@ async def leave_fed(client, message):
         return await message.reply_text("Only Group Creator can leave fed!")
     
     chat_title = message.chat.title
-    leave_fed_db(chat_id, chat_title, fed_id)
-    fed_name = get_fed_name(fed_id)
+    await leave_fed_db(chat_id, chat_title, fed_id)
+    fed_name = await get_fed_name(fed_id=fed_id)
     
     await message.reply_text(f'Successfully left the "{fed_name}" federation!')
 
@@ -138,16 +233,16 @@ async def rename_fed(client, message):
         return await message.reply_text("Your fed must be smaller than 60 words.")
     
     owner_id = message.from_user.id
-    fed_id = get_fed_from_ownerid(owner_id)
+    fed_id = await get_fed_from_ownerid(owner_id)
     if fed_id is None:
         return await message.reply_text("It doesn't look like you have a federation yet!")
     
-    old_fed_name = get_fed_name(owner_id=owner_id)
-    rename_fed_db(owner_id, fed_name)
+    old_fed_name = await get_fed_name(owner_id=owner_id)
+    await rename_fed_db(owner_id, fed_name)
     
     await message.reply_text(f"I've renamed your federation from '{old_fed_name}' to '{fed_name}'. ( FedID: `{fed_id}`.)")
     
-    connected_chats = get_connected_chats(fed_id)
+    connected_chats = await get_connected_chats(fed_id)
     for chat_id in connected_chats:
         await client.send_message(
             chat_id,
