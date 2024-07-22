@@ -2,7 +2,7 @@ import uuid
 import time
 import asyncpg
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackContext
+from telegram.ext import CommandHandler, CallbackContext
 
 pool = None
 LOG_GROUP_ID = None
