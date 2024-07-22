@@ -13,7 +13,7 @@ A Telegram bot that manages federated bans, karma system, and admin functionalit
 
 1. Clone the repository
     ```sh
-    git clone https://github.com/yourusername/FedbanBot.git
+    git clone https://github.com/Michilis/Fedban-bot.git
     cd FedbanBot
     ```
 
