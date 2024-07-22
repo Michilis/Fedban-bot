@@ -24,7 +24,8 @@ async def start(update, context):
 
 async def error_handler(update, context):
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
-    await update.message.reply_text('An error occurred. Please try again later.')
+    if update and update.message:
+        await update.message.reply_text('An error occurred. Please try again later.')
 
 async def start_bot():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -36,7 +37,7 @@ async def start_bot():
     application.add_error_handler(error_handler)
 
     logger.info("Initializing database...")
-    await federation.init_db(DATABASE_URL)  # Initialize the database with the correct URL
+    await federation.init_db(DATABASE_URL)
 
     logger.info("Starting bot...")
     await application.initialize()
