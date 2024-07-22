@@ -1,13 +1,23 @@
 import asyncio
+import os
+from dotenv import load_dotenv
 from pyrogram import Client, filters, idle
-from config import Config
 from modules import federation, help
 
-app = Client("fedban_bot", bot_token=Config.BOT_TOKEN)
+# Load environment variables from .env file
+load_dotenv()
+
+# Get configuration values
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID"))
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Initialize the Pyrogram Client
+app = Client("fedban_bot", bot_token=BOT_TOKEN)
 
 async def start_bot():
     await app.start()
-    await federation.init_db()
+    await federation.init_db(DATABASE_URL)
     print("Bot started successfully!")
 
     # Add handlers for federation commands
