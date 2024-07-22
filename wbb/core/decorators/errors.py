@@ -1,7 +1,7 @@
 import traceback
 from functools import wraps
 from pyrogram.errors.exceptions.forbidden_403 import ChatWriteForbidden
-from wbb import LOG_GROUP_ID, app
+from wbb import app
 
 def split_limits(text):
     if len(text) < 2048:
@@ -25,7 +25,7 @@ def capture_err(func):
     @wraps(func)
     async def capture(client, message, *args, **kwargs):
         try:
-            return await func(client, message, *args, **kwargs)
+            return await func(client, message, *args, *kwargs)
         except ChatWriteForbidden:
             await app.leave_chat(message.chat.id)
             return
@@ -40,6 +40,6 @@ def capture_err(func):
                 ),
             )
             for x in error_feedback:
-                await app.send_message(LOG_GROUP_ID, x)
+                await app.send_message(os.getenv("LOG_GROUP_ID"), x)
             raise err
     return capture
