@@ -44,8 +44,7 @@ async def start_bot():
     logger.info("Starting bot...")
     await application.initialize()
     await application.start()
-    await application.updater.start_polling()
-    await application.updater.idle()
+    application.run_polling()
 
 def main() -> None:
     loop = asyncio.new_event_loop()
