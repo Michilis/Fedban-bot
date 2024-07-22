@@ -27,7 +27,6 @@ Send /karma without replying to any message to check karma list of top 10 users"
 regex_upvote = r"^(\++|\+1|thx|tnx|tq|ty|thankyou|thank you|thanx|thanks|pro|cool|good|agree|👍|\++ .+)$"
 regex_downvote = r"^(-+|-1|not cool|disagree|worst|bad|👎|-+ .+)$"
 
-# The rest of the code is same as the provided karma module
-
+# The rest of the code remains the same as previously provided
 # ...
 
