@@ -1,18 +1,23 @@
 # Fedban Bot
 
-A Telegram bot that manages federated bans, karma system, and admin functionalities.
+A Telegram bot to manage federations and ban users across multiple groups.
 
 ## Features
 
-- Federated bans across multiple groups.
-- Karma system for user interactions.
-- Permission management for various commands.
+- Create and manage federations
+- Ban and unban users federation-wide
+- Transfer federation ownership
+- Promote and demote federation admins
+- Broadcast messages to all groups in a federation
+- Set and unset federation log channels
 
 ## Setup
 
-1. Clone the repository
-    ```sh
-    git clone https://github.com/yourusername/FedbanBot.git
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/fedban-bot.git
+   cd fedban-bot
+
     cd FedbanBot
     ```
 
