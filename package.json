@@ -1,0 +1,16 @@
+{
+  "name": "fedban-bot",
+  "version": "1.0.0",
+  "description": "A Telegram bot to manage federations and bans.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "node-telegram-bot-api": "^0.53.0",
+    "pg": "^8.7.1",
+    "sequelize": "^6.6.5",
+    "uuid": "^8.3.2"
+  }
+}
