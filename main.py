@@ -4,7 +4,6 @@ from modules import federation, help
 from dotenv import load_dotenv
 import os
 import asyncio
-from init_db import init_db
 
 # Load environment variables
 load_dotenv()
@@ -37,7 +36,7 @@ async def start_bot():
     application.add_error_handler(error_handler)
 
     logger.info("Initializing database...")
-    await init_db()
+    await federation.init_db(DATABASE_URL)  # Initialize the database with the correct URL
 
     logger.info("Starting bot...")
     await application.initialize()
