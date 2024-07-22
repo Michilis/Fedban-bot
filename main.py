@@ -42,14 +42,10 @@ async def start_bot():
     await init_db()
 
     logger.info("Starting bot...")
-    await application.initialize()
-    await application.start()
     application.run_polling()
 
-def main() -> None:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(start_bot())
+async def main() -> None:
+    await start_bot()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
