@@ -12,7 +12,7 @@ from pyrogram.types import (
     ChatPrivileges,
     Message,
 )
-from wbb import BOT_ID, SUDOERS, app, log
+from wbb import BOT_ID, app, log
 from wbb.core.decorators.errors import capture_err
 from wbb.core.keyboard import ikb
 from wbb.utils.dbfunctions import (
@@ -55,7 +55,6 @@ __HELP__ = """/ban - Ban A User
 /report | @admins | @admin - Report A Message To Admins.
 /invite - Send Group/SuperGroup Invite Link."""
 
-# The rest of the code is same as the provided admin module
-
+# The rest of the code remains the same as previously provided
 # ...
 
