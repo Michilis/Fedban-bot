@@ -1,9 +1,9 @@
 import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CallbackContext, CommandHandler
+from telegram.ext import ApplicationBuilder, CommandHandler
 from modules import federation, help
 from dotenv import load_dotenv
 import os
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -19,17 +19,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def start(update: Update, context: CallbackContext) -> None:
+async def start(update, context):
     await update.message.reply_text("Hello! I'm the Fedban Bot. How can I help you today?")
 
-async def error_handler(update: Update, context: CallbackContext) -> None:
+async def error_handler(update, context):
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
     await update.message.reply_text('An error occurred. Please try again later.')
 
 async def init_db():
     await federation.init_db(DATABASE_URL)
 
-async def main() -> None:
+async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -41,8 +41,10 @@ async def main() -> None:
     await init_db()
 
     logger.info("Starting bot...")
-    await application.run_async()
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    await application.updater.idle()
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
