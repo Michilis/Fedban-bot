@@ -1,108 +1,75 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackContext, CommandHandler, CallbackQueryHandler
+from telegram import Update
+from telegram.ext import CommandHandler, CallbackContext
 
-# Main help menu
 async def help_menu(update: Update, context: CallbackContext) -> None:
-    keyboard = [
-        [
-            InlineKeyboardButton("Fed Admin Commands", callback_data="fed_admin"),
-            InlineKeyboardButton("Federation Owner Commands", callback_data="fed_owner"),
-        ],
-        [
-            InlineKeyboardButton("User Commands", callback_data="user")
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    help_text = """
+<b>Fedban Bot Commands:</b>
+
+/start - Start the bot
+/help - Show this help menu
+
+<b>Federation Commands:</b>
+/newfed <name> - Create a new federation
+/joinfed <FedID> - Join a federation
+/leavefed <FedID> - Leave a federation
+/renamefed <new name> - Rename your federation
+/fedinfo <FedID> - Get information about a federation
+
+<b>Additional Commands:</b>
+/ban <user> <reason> - Ban a user
+/unban <user> - Unban a user
+/banlist - List banned users
+/whitelist <user> - Whitelist a user
+/unwhitelist <user> - Remove a user from the whitelist
+/whitelistlist - List whitelisted users
+/warn <user> <reason> - Warn a user
+/unwarn <user> - Remove a warning from a user
+/warnlist - List warned users
+/kick <user> - Kick a user
+/promote <user> - Promote a user to admin
+/demote <user> - Demote an admin
+/mute <user> - Mute a user
+/unmute <user> - Unmute a user
+
+For detailed usage of each command, type /help <command>
+"""
+    await update.message.reply_text(help_text, parse_mode='HTML')
+
+async def detailed_help(update: Update, context: CallbackContext) -> None:
+    if len(context.args) == 0:
+        await update.message.reply_text("Please specify a command to get help for.")
+        return
     
-    await update.message.reply_text(
-        '''
-Federations
-
-Ah, group management. It's all fun and games, until you start getting spammers in, and you need to ban them. Then you need to start banning more, and more, and it gets painful.
-But then you have multiple groups, and you don't want these spammers in any of your groups - how can you deal? Do you have to ban them manually, in all your groups?
-
-No more! With federations, you can make a ban in one chat overlap to all your other chats.
-You can even appoint federation admins, so that your trustworthiest admins can ban across all the chats that you want to protect.
-
-Use the buttons below to navigate through commands.''', reply_markup=reply_markup)
-
-# Fed Admin Commands
-async def fed_admin(update: Update, context: CallbackContext) -> None:
-    keyboard = [[InlineKeyboardButton("Back", callback_data="main_menu")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    command = context.args[0].lower()
+    detailed_help_texts = {
+        "start": "/start - Start the bot and initialize it.",
+        "help": "/help - Show the help menu with available commands.",
+        "newfed": "/newfed <name> - Create a new federation with the given name.",
+        "joinfed": "/joinfed <FedID> - Join a federation using the federation ID.",
+        "leavefed": "/leavefed <FedID> - Leave a federation using the federation ID.",
+        "renamefed": "/renamefed <new name> - Rename your federation to the new name.",
+        "fedinfo": "/fedinfo <FedID> - Get detailed information about a federation using the federation ID.",
+        "ban": "/ban <user> <reason> - Ban a user from the federation with an optional reason.",
+        "unban": "/unban <user> - Unban a user from the federation.",
+        "banlist": "/banlist - List all banned users in the federation.",
+        "whitelist": "/whitelist <user> - Add a user to the federation's whitelist.",
+        "unwhitelist": "/unwhitelist <user> - Remove a user from the federation's whitelist.",
+        "whitelistlist": "/whitelistlist - List all whitelisted users in the federation.",
+        "warn": "/warn <user> <reason> - Warn a user with an optional reason.",
+        "unwarn": "/unwarn <user> - Remove a warning from a user.",
+        "warnlist": "/warnlist - List all warned users in the federation.",
+        "kick": "/kick <user> - Kick a user from the group.",
+        "promote": "/promote <user> - Promote a user to admin.",
+        "demote": "/demote <user> - Demote an admin to a regular user.",
+        "mute": "/mute <user> - Mute a user in the group.",
+        "unmute": "/unmute <user> - Unmute a user in the group."
+    }
     
-    await update.callback_query.message.edit_text(
-        '''
-Fed Admin Commands
+    if command in detailed_help_texts:
+        await update.message.reply_text(detailed_help_texts[command])
+    else:
+        await update.message.reply_text("No detailed help available for this command.")
 
-The following is the list of all fed admin commands. To run these, you have to be a federation admin in the current federation.
-
-Commands:
-- /fban <user> <reason>: Bans a user from the current chat's federation
-- /unfban <user>: Unbans a user from the current chat's federation
-- /feddemoteme <fedID>: Demote yourself from a fed.
-- /myfeds: List all feds you are an admin in.
-        ''', reply_markup=reply_markup)
-
-# Federation Owner Commands
-async def fed_owner(update: Update, context: CallbackContext) -> None:
-    keyboard = [[InlineKeyboardButton("Back", callback_data="main_menu")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.callback_query.message.edit_text(
-        '''
-Federation Owner Commands
-
-These are the list of available fed owner commands. To run these, you have to own the current federation.
-
-Commands:
-- /newfed <fedname>: Creates a new federation with the given name. Only one federation per user.
-- /renamefed <fedname>: Rename your federation.
-- /delfed: Deletes your federation, and any information related to it. Will not unban any banned users.
-- /fedtransfer <reply/username/mention/userid>: Transfer your federation to another user.
-- /fedpromote: Promote a user to fedadmin in your fed. To avoid unwanted fedadmin, the user will get a message to confirm this.
-- /feddemote: Demote a federation admin in your fed.
-- /fednotif <yes/no/on/off>: Whether or not to receive PM notifications of every fed action.
-- /fedreason <yes/no/on/off>: Whether or not fedbans should require a reason.
-- /subfed <FedId>: Subscribe your federation to another. Users banned in the subscribed fed will also be banned in this one.
-Note: This does not affect your banlist. You just inherit any bans.
-- /unsubfed <FedId>: Unsubscribes your federation from another. Bans from the other fed will no longer take effect.
-- /fedexport <csv/minicsv/json/human>: Get the list of currently banned users. Default output is CSV.
-- /fedimport <overwrite/keep> <csv/minicsv/json/human>: Import a list of banned users.
-- /setfedlog: Sets the current chat as the federation log. All federation events will be logged here.
-- /unsetfedlog: Unset the federation log. Events will no longer be logged.
-- /setfedlang: Change the language of the federation log. Note: This does not change the language of Rose's replies to fed commands, only the log channel.
-        ''', reply_markup=reply_markup)
-
-# User Commands
-async def user(update: Update, context: CallbackContext) -> None:
-    keyboard = [[InlineKeyboardButton("Back", callback_data="main_menu")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.callback_query.message.edit_text(
-        '''
-User Commands
-
-These commands do not require you to be admin of a federation. These commands are for general commands, such as looking up information on a fed, or checking a user's fbans.
-
-Commands:
-- /fedinfo <FedID>: Information about a federation.
-- /fedadmins <FedID>: List the admins in a federation.
-- /fedsubs <FedID>: List all federations your federation is subscribed to.
-- /joinfed <FedID>: Join the current chat to a federation. A chat can only join one federation. Chat owners only.
-- /leavefed: Leave the current federation. Only chat owners can do this.
-- /fedstat: List all the federations that you have been banned in.
-- /fedstat <user ID>: List all the federations that a user has been banned in.
-- /fedstat <FedID>: Gives information about your ban in a federation.
-- /fedstat <user ID> <FedID>: Gives information about a user's ban in a federation.
-- /chatfed: Information about the federation the current chat is in.
-- /quietfed <yes/no/on/off>: Whether or not to send ban notifications when fedbanned users join the chat.
-        ''', reply_markup=reply_markup)
-
-# Register help handlers
 def register_help_handlers(app):
     app.add_handler(CommandHandler("help", help_menu))
-    app.add_handler(CallbackQueryHandler(help_menu, pattern=r"^main_menu$"))
-    app.add_handler(CallbackQueryHandler(fed_admin, pattern=r"^fed_admin$"))
-    app.add_handler(CallbackQueryHandler(fed_owner, pattern=r"^fed_owner$"))
-    app.add_handler(CallbackQueryHandler(user, pattern=r"^user$"))
+    app.add_handler(CommandHandler("help", detailed_help, pass_args=True))
