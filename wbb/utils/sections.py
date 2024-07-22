@@ -1,4 +1,5 @@
 def section(title, body):
-    # Function to create sectioned messages
-    # ...
-
+    msg = f"**{title}**\n"
+    for key, value in body.items():
+        msg += f"**{key}**: {' '.join(value)}\n"
+    return msg
