@@ -1,6 +1,6 @@
 pyrogram==1.4.16
 tgcrypto==1.2.3
-asyncpg==0.29.0
 python-dotenv==0.19.2
 pyaes==1.6.1
 pysocks==1.7.1
+asyncpg==0.29.0
