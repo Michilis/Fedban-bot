@@ -1,7 +1,8 @@
 import asyncio
 import os
 from dotenv import load_dotenv
-from pyrogram import Client, filters, idle
+from pyrogram import Client, idle
+from pyrogram.filters import command
 from modules import federation, help
 
 # Load environment variables from .env file
@@ -25,14 +26,14 @@ async def start_bot():
     print("Bot started successfully!")
 
     # Add handlers for federation commands
-    app.add_handler(filters.command("newfed"), federation.new_fed)
-    app.add_handler(filters.command("joinfed"), federation.join_fed)
-    app.add_handler(filters.command("leavefed"), federation.leave_fed)
-    app.add_handler(filters.command("renamefed"), federation.rename_fed)
-    app.add_handler(filters.command("fedinfo"), federation.info_feds)
+    app.add_handler(command("newfed"), federation.new_fed)
+    app.add_handler(command("joinfed"), federation.join_fed)
+    app.add_handler(command("leavefed"), federation.leave_fed)
+    app.add_handler(command("renamefed"), federation.rename_fed)
+    app.add_handler(command("fedinfo"), federation.info_feds)
 
     # Add handler for help command
-    app.add_handler(filters.command("help"), help.help_menu)
+    app.add_handler(command("help"), help.help_menu)
 
     # Register help menu handlers
     help.register_help_handlers(app)
