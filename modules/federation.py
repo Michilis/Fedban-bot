@@ -163,11 +163,19 @@ async def rename_fed(client, message):
     old_fed_name = await get_fed_name(fed_id)
     await fed_rename_db(owner_id, fed_name)
     await message.reply(f"I've renamed your federation from '{old_fed_name}' to '{fed_name}'. (FedID: `{fed_id}`.)")
-    
     connected_chats = await get_connected_chats(fed_id)
     for chat_id in connected_chats:
-        await client.send_message(chat_id=chat_id, text=(
-            "**Federation renamed**\n"
-            f"**Old fed name:** {old_fed_name}\n"
-            f"**New fed name:** {fed_name}\n"
-            f"FedID: `{fed_id}`"))
+        await client.send_message(
+            chat_id=chat_id, text=(
+                "**Federation renamed**\n"
+                f"**Old fed name:** {old_fed_name}\n"
+                f"**New fed name:** {fed_name}\n"
+                f"FedID: `{fed_id}`"))
+
+# Register commands
+def register_federation_handlers(app):
+    app.add_handler(filters.command("newfed"), new_fed)
+    app.add_handler(filters.command("joinfed"), join_fed)
+    app.add_handler(filters.command("leavefed"), leave_fed)
+    app.add_handler(filters.command("renamefed"), rename_fed)
+    app.add_handler(filters.command("fedinfo"), info_feds)
