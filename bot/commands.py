@@ -1,4 +1,4 @@
-from pyrogram import Client, filters
+from pyrogram import filters
 from pyrogram.enums import ChatType, ChatMemberStatus
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -6,11 +6,12 @@ from db import (
     create_federation, delete_federation, get_fed_info, get_feds_by_owner,
     add_fed_admin, remove_fed_admin, add_banned_user, remove_banned_user, set_log_chat,
     get_fed_id, is_user_fed_owner, check_banned_user, chat_join_fed, chat_leave_fed,
-    get_feds_by_owner, search_fed_by_id, is_group_admin, chat_id_and_names_in_fed,
+    search_fed_by_id, is_group_admin, chat_id_and_names_in_fed,
     transfer_owner, get_user_fstatus
 )
 from utils import generate_fed_id, create_confirmation_markup, extract_user_and_reason
 from config import LOG_GROUP_ID, SUDOERS
+from app import app  # Import the app instance
 
 @app.on_message(filters.command("newfed"))
 async def new_fed(client: Client, message: Message):
