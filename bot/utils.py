@@ -1,5 +1,7 @@
 import uuid
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from db import get_fed_info
+from app import app
 
 async def generate_fed_id(user_id):
     return f"{user_id}:{uuid.uuid4()}"
