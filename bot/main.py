@@ -1,6 +1,6 @@
 import asyncio
-from app import app  # Import the app instance from app.py
-from db import init_db
+from bot.app import app  # Import the app instance from bot.app
+from bot.db import init_db
 
 # Import commands and callbacks to register them
 import bot.commands
