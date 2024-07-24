@@ -1,5 +1,4 @@
 from pyrogram import Client
-
 from config import BOT_TOKEN
 from db import init_db
 
