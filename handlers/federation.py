@@ -1,6 +1,6 @@
 import asyncio
 import uuid
-from pyrogram import Client, filters
+from pyrogram import filters
 from pyrogram.enums import ChatMemberStatus, ChatType, ParseMode
 from pyrogram.errors import FloodWait, PeerIdInvalid, ChatAdminRequired
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -30,7 +30,6 @@ async def extract_user(message):
             user_id = message.text.split(None, 1)[1]
     return user_id
 
-@app.on_message(filters.command("newfed"))
 async def new_fed(client, message):
     user = message.from_user
     if message.chat.type != ChatType.PRIVATE:
@@ -54,7 +53,6 @@ async def new_fed(client, message):
         parse_mode=ParseMode.MARKDOWN,
     )
 
-@app.on_message(filters.command("delfed"))
 async def del_fed(client, message):
     user = message.from_user
     if message.chat.type != ChatType.PRIVATE:
@@ -75,7 +73,6 @@ async def del_fed(client, message):
     else:
         return await message.reply_text("Please provide the federation ID to delete.")
 
-@app.on_message(filters.command("fedtransfer"))
 async def fedtransfer(client, message):
     user = message.from_user
     if message.chat.type != ChatType.PRIVATE:
@@ -93,7 +90,6 @@ async def fedtransfer(client, message):
     execute_query('UPDATE federations SET owner_id = %s WHERE fed_id = %s', (new_owner_id, fed_id))
     await message.reply_text(f"Federation '{fed_info['fed_name']}' has been transferred to {new_owner_id}.")
 
-@app.on_message(filters.command("myfeds"))
 async def myfeds(client, message):
     user = message.from_user
     feds = fetch_all('SELECT * FROM federations WHERE owner_id = %s', (user.id,))
@@ -104,7 +100,6 @@ async def myfeds(client, message):
     response_text = "\n\n".join([f"Name: {fed['fed_name']}\nID: {fed['fed_id']}" for fed in feds])
     await message.reply_text(f"**Here are the federations you have created:**\n\n{response_text}")
 
-@app.on_message(filters.command("renamefed"))
 async def rename_fed(client, message):
     user = message.from_user
     if len(message.command) < 3:
@@ -119,7 +114,6 @@ async def rename_fed(client, message):
     execute_query('UPDATE federations SET fed_name = %s WHERE fed_id = %s', (new_name, fed_id))
     await message.reply_text(f"Federation '{fed_id}' has been renamed to {new_name}.")
 
-@app.on_message(filters.command(["setfedlog", "unsetfedlog"]))
 async def fed_log(client, message):
     user = message.from_user
     if len(message.command) < 3:
@@ -138,7 +132,6 @@ async def fed_log(client, message):
         execute_query('UPDATE federations SET log_group_id = NULL WHERE fed_id = %s', (fed_id,))
         await message.reply_text(f"Log group has been unset for federation '{fed_info['fed_name']}'.")
 
-@app.on_message(filters.command("chatfed"))
 async def fed_chat(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
@@ -150,7 +143,6 @@ async def fed_chat(client, message):
     fed_info = fetch_one('SELECT * FROM federations WHERE fed_id = %s', (fed_id,))
     await message.reply_text(f"This group is part of the following federation:\n\nName: {fed_info['fed_name']}\nID: {fed_info['fed_id']}", parse_mode=ParseMode.HTML)
 
-@app.on_message(filters.command("joinfed"))
 async def join_fed(client, message):
     user = message.from_user
     if message.chat.type == ChatType.PRIVATE:
@@ -167,7 +159,6 @@ async def join_fed(client, message):
     execute_query('UPDATE federations SET chat_ids = array_append(chat_ids, %s) WHERE fed_id = %s', (message.chat.id, fed_id))
     await message.reply_text(f"This group has joined the federation: {fed_info['fed_name']}!")
 
-@app.on_message(filters.command("leavefed"))
 async def leave_fed(client, message):
     user = message.from_user
     if message.chat.type == ChatType.PRIVATE:
@@ -181,8 +172,7 @@ async def leave_fed(client, message):
     execute_query('UPDATE federations SET chat_ids = array_remove(chat_ids, %s) WHERE fed_id = %s', (message.chat.id, fed_id))
     await message.reply_text(f"This group has left the federation: {fed_info['fed_name']}!")
 
-@app.on_message(filters.command("fedchats"))
-async def fed_chat(client, message):
+async def fed_chats(client, message):
     if len(message.command) < 2:
         return await message.reply_text("Usage: /fedchats <fed_id>")
     
@@ -196,7 +186,6 @@ async def fed_chat(client, message):
     response_text = "\n".join([f"{chat_name} [{chat_id}]" for chat_name, chat_id in zip(chat_names, chat_ids)])
     await message.reply_text(f"**Here are the chats connected to this federation:**\n\n{response_text}")
 
-@app.on_message(filters.command("fedinfo"))
 async def fed_info(client, message):
     if len(message.command) < 2:
         return await message.reply_text("Usage: /fedinfo <fed_id>")
@@ -217,7 +206,6 @@ async def fed_info(client, message):
     )
     await message.reply_text(response_text)
 
-@app.on_message(filters.command("fedadmins"))
 async def get_all_fadmins_mentions(client, message):
     if len(message.command) < 2:
         return await message.reply_text("Usage: /fedadmins <fed_id>")
@@ -232,7 +220,6 @@ async def get_all_fadmins_mentions(client, message):
     response_text = f"**Federation Admins:**\n\n" + "\n".join(user_mentions)
     await message.reply_text(response_text)
 
-@app.on_message(filters.command("fpromote"))
 async def fpromote(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
@@ -252,7 +239,6 @@ async def fpromote(client, message):
     execute_query('UPDATE federations SET fadmins = array_append(fadmins, %s) WHERE fed_id = %s', (user_id, fed_id))
     await message.reply_text(f"User {user_id} has been promoted to federation admin!")
 
-@app.on_message(filters.command("fdemote"))
 async def fdemote(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
@@ -272,7 +258,6 @@ async def fdemote(client, message):
     execute_query('UPDATE federations SET fadmins = array_remove(fadmins, %s) WHERE fed_id = %s', (user_id, fed_id))
     await message.reply_text(f"User {user_id} has been demoted from federation admin!")
 
-@app.on_message(filters.command(["fban", "sfban"]))
 async def fban_user(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
@@ -292,7 +277,6 @@ async def fban_user(client, message):
     execute_query('UPDATE federations SET banned_users = array_append(banned_users, %s) WHERE fed_id = %s', (user_id, fed_id))
     await message.reply_text(f"User {user_id} has been banned from the federation!")
 
-@app.on_message(filters.command(["unfban", "sunfban"]))
 async def funban_user(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
@@ -320,7 +304,6 @@ async def status(message, user_id):
     else:
         await message.reply_text(f"User {user_id} is not banned in any federations.")
 
-@app.on_message(filters.command("fedstat"))
 async def fedstat(client, message):
     if len(message.command) < 2:
         return await message.reply_text("Usage: /fedstat <user_id>")
@@ -328,7 +311,6 @@ async def fedstat(client, message):
     user_id = int(message.command[1])
     await status(message, user_id)
 
-@app.on_message(filters.command("fbroadcast"))
 async def fbroadcast_message(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
@@ -355,3 +337,23 @@ async def fbroadcast_message(client, message):
             pass
 
     await message.reply_text(f"Broadcasted message to {sent} chats.")
+
+def register_federation_handlers(app):
+    app.add_handler(filters.command("newfed")(new_fed))
+    app.add_handler(filters.command("delfed")(del_fed))
+    app.add_handler(filters.command("fedtransfer")(fedtransfer))
+    app.add_handler(filters.command("myfeds")(myfeds))
+    app.add_handler(filters.command("renamefed")(rename_fed))
+    app.add_handler(filters.command(["setfedlog", "unsetfedlog"])(fed_log))
+    app.add_handler(filters.command("chatfed")(fed_chat))
+    app.add_handler(filters.command("joinfed")(join_fed))
+    app.add_handler(filters.command("leavefed")(leave_fed))
+    app.add_handler(filters.command("fedchats")(fed_chats))
+    app.add_handler(filters.command("fedinfo")(fed_info))
+    app.add_handler(filters.command("fedadmins")(get_all_fadmins_mentions))
+    app.add_handler(filters.command("fpromote")(fpromote))
+    app.add_handler(filters.command("fdemote")(fdemote))
+    app.add_handler(filters.command(["fban", "sfban"])(fban_user))
+    app.add_handler(filters.command(["unfban", "sunfban"])(funban_user))
+    app.add_handler(filters.command("fedstat")(fedstat))
+    app.add_handler(filters.command("fbroadcast")(fbroadcast_message))
