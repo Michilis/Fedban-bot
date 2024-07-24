@@ -4,24 +4,9 @@ from pyrogram import Client, filters
 from pyrogram.enums import ChatMemberStatus, ChatType, ParseMode
 from pyrogram.errors import FloodWait, PeerIdInvalid, ChatAdminRequired
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from database.db import conn
+from database.db import fetch_one, fetch_all, execute_query
 
 SUPPORT_CHAT = "@YourSupportChat"  # Replace with your support chat
-
-def fetch_one(query, params=None):
-    with conn.cursor() as cur:
-        cur.execute(query, params)
-        return cur.fetchone()
-
-def fetch_all(query, params=None):
-    with conn.cursor() as cur:
-        cur.execute(query, params)
-        return cur.fetchall()
-
-def execute_query(query, params=None):
-    with conn.cursor() as cur:
-        cur.execute(query, params)
-        conn.commit()
 
 async def extract_user_and_reason(message):
     user_id = None
@@ -57,9 +42,9 @@ async def new_fed(client, message):
     fed_name = message.text.split(None, 1)[1]
     fed_id = f"{user.id}:{uuid.uuid4()}"
     execute_query('''
-        INSERT INTO federations (fed_id, fed_name, owner_id, fadmins, banned_users)
-        VALUES (%s, %s, %s, %s, %s)
-    ''', (fed_id, fed_name, user.id, [], []))
+        INSERT INTO federations (fed_id, fed_name, owner_id, fadmins, banned_users, chat_ids)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    ''', (fed_id, fed_name, user.id, [], [], []))
 
     await message.reply_text(
         f"**You have succeeded in creating a new federation!**\n"
@@ -158,7 +143,7 @@ async def fed_chat(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
 
-    fed_id = fetch_one('SELECT fed_id FROM federations WHERE chat_ids @> ARRAY[%s]', (message.chat.id,))
+    fed_id = fetch_one('SELECT fed_id FROM federations WHERE %s = ANY(chat_ids)', (message.chat.id,))
     if not fed_id:
         return await message.reply_text("This group is not part of any federation!")
     
@@ -188,7 +173,7 @@ async def leave_fed(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
 
-    fed_id = fetch_one('SELECT fed_id FROM federations WHERE chat_ids @> ARRAY[%s]', (message.chat.id,))
+    fed_id = fetch_one('SELECT fed_id FROM federations WHERE %s = ANY(chat_ids)', (message.chat.id,))
     if not fed_id:
         return await message.reply_text("This group is not part of any federation!")
     
@@ -256,7 +241,7 @@ async def fpromote(client, message):
         return await message.reply_text("Usage: /fpromote <user_id>")
     
     user_id = int(message.command[1])
-    fed_id = fetch_one('SELECT fed_id FROM federations WHERE chat_ids @> ARRAY[%s]', (message.chat.id,))
+    fed_id = fetch_one('SELECT fed_id FROM federations WHERE %s = ANY(chat_ids)', (message.chat.id,))
     if not fed_id:
         return await message.reply_text("This group is not part of any federation!")
     
@@ -276,7 +261,7 @@ async def fdemote(client, message):
         return await message.reply_text("Usage: /fdemote <user_id>")
     
     user_id = int(message.command[1])
-    fed_id = fetch_one('SELECT fed_id FROM federations WHERE chat_ids @> ARRAY[%s]', (message.chat.id,))
+    fed_id = fetch_one('SELECT fed_id FROM federations WHERE %s = ANY(chat_ids)', (message.chat.id,))
     if not fed_id:
         return await message.reply_text("This group is not part of any federation!")
     
@@ -292,7 +277,7 @@ async def fban_user(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
 
-    fed_id = fetch_one('SELECT fed_id FROM federations WHERE chat_ids @> ARRAY[%s]', (message.chat.id,))
+    fed_id = fetch_one('SELECT fed_id FROM federations WHERE %s = ANY(chat_ids)', (message.chat.id,))
     if not fed_id:
         return await message.reply_text("This group is not part of any federation!")
 
@@ -312,7 +297,7 @@ async def funban_user(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
 
-    fed_id = fetch_one('SELECT fed_id FROM federations WHERE chat_ids @> ARRAY[%s]', (message.chat.id,))
+    fed_id = fetch_one('SELECT fed_id FROM federations WHERE %s = ANY(chat_ids)', (message.chat.id,))
     if not fed_id:
         return await message.reply_text("This group is not part of any federation!")
 
@@ -348,7 +333,7 @@ async def fbroadcast_message(client, message):
     if message.chat.type == ChatType.PRIVATE:
         return await message.reply_text("This command is specific to groups, not private messages!")
 
-    fed_id = fetch_one('SELECT fed_id FROM federations WHERE chat_ids @> ARRAY[%s]', (message.chat.id,))
+    fed_id = fetch_one('SELECT fed_id FROM federations WHERE %s = ANY(chat_ids)', (message.chat.id,))
     if not fed_id:
         return await message.reply_text("This group is not part of any federation!")
 
