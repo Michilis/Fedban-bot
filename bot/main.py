@@ -1,4 +1,10 @@
+import sys
+import os
 import asyncio
+
+# Ensure the bot directory is in the module search path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'bot')))
+
 from bot.app import app  # Import the app instance from bot.app
 from bot.db import init_db
 
