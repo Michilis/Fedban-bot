@@ -1,15 +1,6 @@
-import sys
-import os
 import asyncio
-
-# Ensure the bot directory is in the module search path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bot')))
-
-from pyrogram import Client
-from config import BOT_TOKEN
+from app import app  # Import the app instance from app.py
 from db import init_db
-
-app = Client("fedban_bot", bot_token=BOT_TOKEN)
 
 # Import commands and callbacks to register them
 import bot.commands
