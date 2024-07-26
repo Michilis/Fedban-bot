@@ -1,4 +1,4 @@
-from telegram import Bot
+from telegram.ext import ApplicationBuilder
 from config import BOT_TOKEN
 
-bot = Bot(token=BOT_TOKEN)
+app = ApplicationBuilder().token(BOT_TOKEN).build()
