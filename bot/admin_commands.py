@@ -9,7 +9,7 @@ from bot.db import (
     check_banned_user,
 )
 from config import DEBUGGING
-from messages import MESSAGES
+from bot.messages import MESSAGES  # Updated import
 
 if DEBUGGING:
     logger = logging.getLogger()
