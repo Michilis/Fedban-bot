@@ -1,11 +1,10 @@
 import logging
 import asyncio
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackContext
-from config import TOKEN, DEBUGGING
+from telegram.ext import ApplicationBuilder
 from bot.user_commands import register_user_command_handlers
 from bot.admin_commands import register_admin_command_handlers
 from bot.owner_commands import register_owner_command_handlers
+from config import TOKEN, DEBUGGING
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
