@@ -1,32 +1,38 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackContext
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CallbackQueryHandler
 from bot.messages import MESSAGES
 
-def fed_admin_commands(update: Update, context: CallbackContext):
-    update.callback_query.message.edit_text(
+def register_help_handlers(app):
+    app.add_handler(CallbackQueryHandler(fed_admin_commands, pattern="fed_admin"))
+    app.add_handler(CallbackQueryHandler(fed_owner_commands, pattern="fed_owner"))
+    app.add_handler(CallbackQueryHandler(user_commands, pattern="user"))
+    app.add_handler(CallbackQueryHandler(back_to_main, pattern="back_to_main"))
+
+async def fed_admin_commands(update, context):
+    await update.callback_query.message.edit_text(
         MESSAGES["fed_admin_commands"],
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Back", callback_data="back_to_main")]]
         )
     )
 
-def fed_owner_commands(update: Update, context: CallbackContext):
-    update.callback_query.message.edit_text(
+async def fed_owner_commands(update, context):
+    await update.callback_query.message.edit_text(
         MESSAGES["fed_owner_commands"],
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Back", callback_data="back_to_main")]]
         )
     )
 
-def user_commands(update: Update, context: CallbackContext):
-    update.callback_query.message.edit_text(
+async def user_commands(update, context):
+    await update.callback_query.message.edit_text(
         MESSAGES["user_commands"],
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Back", callback_data="back_to_main")]]
         )
     )
 
-def back_to_main(update: Update, context: CallbackContext):
+async def back_to_main(update, context):
     keyboard = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("Fed Admin Commands", callback_data="fed_admin")],
@@ -34,6 +40,6 @@ def back_to_main(update: Update, context: CallbackContext):
             [InlineKeyboardButton("User Commands", callback_data="user")],
         ]
     )
-    update.callback_query.message.edit_text(
+    await update.callback_query.message.edit_text(
         MESSAGES["help_menu"], reply_markup=keyboard
     )
