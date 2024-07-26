@@ -10,9 +10,11 @@ async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     register_command_handlers(app)
     register_help_handlers(app)
-    await app.start()
+    await app.initialize()
     print("Bot is running...")
-    await app.run_polling()
+    await app.start()
+    await app.updater.start_polling()
+    await app.idle()
 
 if __name__ == "__main__":
     asyncio.run(main())
