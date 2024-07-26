@@ -1,4 +1,4 @@
-from pyrogram import Client
+from telegram import Bot
 from config import BOT_TOKEN
 
-app = Client("fedban_bot", bot_token=BOT_TOKEN, api_id=None, api_hash=None)
+bot = Bot(token=BOT_TOKEN)
