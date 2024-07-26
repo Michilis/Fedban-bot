@@ -1,4 +1,3 @@
-# main.py
 import asyncio
 from bot.app import app
 from bot.db import init_db
@@ -8,7 +7,11 @@ async def main():
     await init_db()
     register_command_handlers(app)
     print("Bot is running...")
-    await app.run_polling()
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    await app.idle()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
