@@ -8,7 +8,7 @@ from bot.db import (
     chat_id_and_names_in_fed,
 )
 from config import DEBUGGING, LOG_GROUP_ID
-from messages import MESSAGES
+from bot.messages import MESSAGES  # Updated import
 
 if DEBUGGING:
     logger = logging.getLogger()
@@ -19,19 +19,19 @@ async def start(update: Update, context: CallbackContext) -> None:
         logger.debug(f"User {update.message.from_user.id} issued /start command")
     await update.message.reply_text(MESSAGES["start_message"])
 
-async def chat_join_fed(update: Update, context: CallbackContext) -> None:
+async def join_fed(update: Update, context: CallbackContext) -> None:
     chat_id = update.message.chat_id
     fed_id = context.args[0]
     await chat_join_fed(fed_id, chat_id)
     await update.message.reply_text(MESSAGES["group_joined_federation"].format(fed_name=fed_id))
 
-async def chat_leave_fed(update: Update, context: CallbackContext) -> None:
+async def leave_fed(update: Update, context: CallbackContext) -> None:
     chat_id = update.message.chat_id
     fed_id = await get_fed_id(chat_id)
     await chat_leave_fed(fed_id, chat_id)
     await update.message.reply_text(MESSAGES["group_left_federation"].format(fed_name=fed_id))
 
-async def chat_id_and_names_in_fed(update: Update, context: CallbackContext) -> None:
+async def fed_chats(update: Update, context: CallbackContext) -> None:
     fed_id = context.args[0]
     chats = await chat_id_and_names_in_fed(fed_id)
     if not chats:
@@ -42,6 +42,6 @@ async def chat_id_and_names_in_fed(update: Update, context: CallbackContext) -> 
 
 def register_user_command_handlers(app):
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("joinfed", chat_join_fed))
-    app.add_handler(CommandHandler("leavefed", chat_leave_fed))
-    app.add_handler(CommandHandler("fedchats", chat_id_and_names_in_fed))
+    app.add_handler(CommandHandler("joinfed", join_fed))
+    app.add_handler(CommandHandler("leavefed", leave_fed))
+    app.add_handler(CommandHandler("fedchats", fed_chats))
