@@ -9,13 +9,11 @@ async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     register_command_handlers(app)
     print("Bot is running...")
-    await app.run_polling()
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    await app.updater.idle()
 
 if __name__ == "__main__":
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:  # No running event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
+    loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
