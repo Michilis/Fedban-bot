@@ -7,10 +7,6 @@ load_dotenv()
 # Telegram bot token
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# API ID and Hash
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
-
 # PostgreSQL database URL
 DATABASE_URL = os.getenv("DATABASE_URL")
 
