@@ -12,8 +12,11 @@ async def main():
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
-    await app.updater.idle()
+    await app.idle()
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    if loop.is_running():
+        loop.create_task(main())
+    else:
+        loop.run_until_complete(main())
