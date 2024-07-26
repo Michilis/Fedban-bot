@@ -1,5 +1,5 @@
-from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, Chat, ChatMember
+from telegram.ext import Application, CommandHandler, CallbackContext, ContextTypes
 from bot.utils import generate_fed_id, create_confirmation_markup, extract_user_and_reason
 from bot.db import (
     create_federation, delete_federation, get_fed_info, get_feds_by_owner,
@@ -25,7 +25,7 @@ async def fedhelp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["help_menu"], reply_markup=keyboard)
 
 async def new_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type != ChatType.PRIVATE:
+    if update.message.chat.type != Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["create_fed_private"])
         return
     if len(context.args) < 1:
@@ -37,7 +37,7 @@ async def new_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["new_fed_created"].format(fed_name=fed_name, fed_id=fed_id))
 
 async def del_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type != ChatType.PRIVATE:
+    if update.message.chat.type != Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["delete_fed_private"])
         return
     if len(context.args) < 1:
@@ -55,7 +55,7 @@ async def del_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["fed_deleted"].format(fed_name=fed_info['fed_name']))
 
 async def fed_transfer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type != ChatType.PRIVATE:
+    if update.message.chat.type != Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["transfer_fed_private"])
         return
     if len(context.args) < 2:
@@ -98,7 +98,7 @@ async def rename_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.message.reply_text(MESSAGES["fed_renamed"].format(new_name=new_name))
 
 async def set_unset_fed_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         if len(context.args) < 2:
             await update.message.reply_text(MESSAGES["set_unset_fed_log_private"].format(command=update.message.text))
             return
@@ -122,7 +122,7 @@ async def set_unset_fed_log(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await update.message.reply_text(MESSAGES["log_channel_set"] if "set" in update.message.text else MESSAGES["log_channel_unset"])
 
 async def chat_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["chat_fed_private"])
         return
     fed_id = await get_fed_id(update.message.chat.id)
@@ -133,7 +133,7 @@ async def chat_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["group_in_federation"].format(fed_name=fed_info['fed_name'], fed_id=fed_id))
 
 async def join_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["join_fed_private"])
         return
     if len(context.args) < 1:
@@ -151,7 +151,7 @@ async def join_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["group_joined_federation"].format(fed_name=fed_info['fed_name']))
 
 async def leave_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["leave_fed_private"])
         return
     fed_id = await get_fed_id(update.message.chat.id)
@@ -166,7 +166,7 @@ async def leave_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["group_left_federation"].format(fed_name=fed_info['fed_name']))
 
 async def fed_chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type != ChatType.PRIVATE:
+    if update.message.chat.type != Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["fedchats_private"])
         return
     if len(context.args) < 1:
@@ -224,7 +224,7 @@ async def fed_admins(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.message.reply_text(MESSAGES["fed_admins_list"].format(owner_mention=fed_info['owner_mention'], admins_list=admins_list))
 
 async def fpromote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["fpromote_private"])
         return
     fed_id = await get_fed_id(update.message.chat.id)
@@ -242,7 +242,7 @@ async def fpromote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["user_promoted"])
 
 async def fdemote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["fdemote_private"])
         return
     fed_id = await get_fed_id(update.message.chat.id)
@@ -260,7 +260,7 @@ async def fdemote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["user_demoted"])
 
 async def fban_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["fban_private"])
         return
     fed_id = await get_fed_id(update.message.chat.id)
@@ -278,7 +278,7 @@ async def fban_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(MESSAGES["user_banned"])
 
 async def funban_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["unfban_private"])
         return
     fed_id = await get_fed_id(update.message.chat.id)
@@ -296,7 +296,7 @@ async def funban_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await update.message.reply_text(MESSAGES["user_unbanned"])
 
 async def fed_stat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type != ChatType.PRIVATE:
+    if update.message.chat.type != Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["fedstat_private"])
         return
     if len(context.args) < 1:
@@ -314,7 +314,7 @@ async def fed_stat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(MESSAGES["user_not_banned"].format(user=user.mention_html()))
 
 async def fbroadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.chat.type == ChatType.PRIVATE:
+    if update.message.chat.type == Chat.PRIVATE:
         await update.message.reply_text(MESSAGES["fbroadcast_private"])
         return
     if not update.message.reply_to_message:
