@@ -1,23 +1,18 @@
-import sys
-import os
 import asyncio
-from telegram.ext import Application
-
-# Ensure the root and bot directories are in the module search path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
-
-from bot.app import app  # Import the app instance from bot.app
+from telegram.ext import ApplicationBuilder
+from bot.commands import register_command_handlers
+from bot.callbacks import register_help_handlers
+from config import BOT_TOKEN
 from bot.db import init_db
-import bot.commands
-import bot.callbacks
 
 async def main():
     await init_db()
-    bot.callbacks.register_help_handlers(app)
-    await app.start_polling()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    register_command_handlers(app)
+    register_help_handlers(app)
+    await app.start()
     print("Bot is running...")
-    await asyncio.get_event_loop().run_forever()
+    await app.run_polling()  # Correct method to start polling for updates
 
 if __name__ == "__main__":
     asyncio.run(main())
