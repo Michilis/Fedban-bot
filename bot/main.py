@@ -12,6 +12,7 @@ async def main():
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
+    await app.updater.stop()
     await app.stop()
     await app.shutdown()
 
