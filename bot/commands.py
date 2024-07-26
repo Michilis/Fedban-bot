@@ -1,4 +1,4 @@
-from pyrogram import Client, filters
+from pyrogram import filters
 from pyrogram.enums import ChatType, ChatMemberStatus
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from bot.app import app  # Import the app instance
@@ -11,7 +11,7 @@ from bot.db import (
 )
 from bot.utils import generate_fed_id, create_confirmation_markup, extract_user_and_reason
 from bot.messages import MESSAGES
-from config import LOG_GROUP_ID, SUDOERS
+from config import LOG_GROUP_ID
 
 @app.on_message(filters.command("start"))
 async def start(client: Client, message: Message):
@@ -161,7 +161,7 @@ async def fed_chats(client: Client, message: Message):
     fed_info = await get_fed_info(fed_id)
     if not fed_info:
         return await message.reply_text(MESSAGES["fed_does_not_exist"])
-    if message.from_user.id not in fed_info["fadmins"] + [fed_info["owner_id"]] + SUDOERS:
+    if message.from_user.id not in fed_info["fadmins"] + [fed_info["owner_id"]]:
         return await message.reply_text(MESSAGES["only_fed_admins_can_check_fedchats"])
     chat_ids, chat_names = await chat_id_and_names_in_fed(fed_id)
     chat_list = "\n".join([f"{chat_name} (`{chat_id}`)" for chat_id, chat_name in zip(chat_ids, chat_names)])
