@@ -13,9 +13,11 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        asyncio.get_running_loop().run_until_complete(main())
-    except RuntimeError as e:
-        if str(e) == 'There is no current event loop in thread':
-            asyncio.run(main())
-        else:
-            raise
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        asyncio.ensure_future(main())
+    else:
+        asyncio.run(main())
