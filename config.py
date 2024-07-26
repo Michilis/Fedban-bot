@@ -1,9 +1,14 @@
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-LOG_GROUP_ID = os.getenv("LOG_GROUP_ID")
-DATABASE_URL = os.getenv("DATABASE_URL")
-DEBUGGING = os.getenv("DEBUGGING", "False").lower() in ("true", "1", "t")
+# Telegram bot token
+TOKEN = os.getenv('TOKEN')
+
+# Debugging mode
+DEBUGGING = os.getenv('DEBUGGING', 'False').lower() in ['true', '1', 't']
+
+# Other configurations can go here
+LOG_GROUP_ID = int(os.getenv('LOG_GROUP_ID'))
