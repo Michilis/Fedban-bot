@@ -1,4 +1,5 @@
 import uuid
+from pyrogram.enums import ChatMemberStatus
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from db import get_fed_info
 from app import app
