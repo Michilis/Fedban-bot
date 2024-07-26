@@ -13,10 +13,9 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        asyncio.get_running_loop().run_until_complete(main())
     except RuntimeError as e:
-        if str(e) == 'This event loop is already running':
-            loop = asyncio.get_running_loop()
-            loop.run_until_complete(main())
+        if str(e) == 'There is no current event loop in thread':
+            asyncio.run(main())
         else:
             raise
