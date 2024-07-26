@@ -12,7 +12,7 @@ async def main():
     register_help_handlers(app)
     await app.start()
     print("Bot is running...")
-    await app.run_polling()  # Correct method to start polling for updates
+    await app.run_polling()
 
 if __name__ == "__main__":
     asyncio.run(main())
