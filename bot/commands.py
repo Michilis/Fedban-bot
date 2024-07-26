@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import CallbackContext
-from bot.app import bot  # Import the bot instance
+from telegram.ext import ContextTypes, CommandHandler
+from telegram.constants import ChatType, ChatMemberStatus
 from bot.db import (
     create_federation, delete_federation, get_fed_info, get_feds_by_owner,
     add_fed_admin, remove_fed_admin, add_banned_user, remove_banned_user, set_log_chat,
@@ -12,10 +12,10 @@ from bot.utils import generate_fed_id, create_confirmation_markup, extract_user_
 from bot.messages import MESSAGES
 from config import LOG_GROUP_ID
 
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text(MESSAGES["start_message"])
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(MESSAGES["start_message"])
 
-def fedhelp(update: Update, context: CallbackContext):
+async def fedhelp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("Fed Admin Commands", callback_data="fed_admin")],
@@ -23,148 +23,181 @@ def fedhelp(update: Update, context: CallbackContext):
             [InlineKeyboardButton("User Commands", callback_data="user")],
         ]
     )
-    update.message.reply_text(MESSAGES["help_menu"], reply_markup=keyboard)
+    await update.message.reply_text(MESSAGES["help_menu"], reply_markup=keyboard)
 
-def new_fed(update: Update, context: CallbackContext):
-    if update.message.chat.type != "private":
-        return update.message.reply_text(MESSAGES["create_fed_private"])
+async def new_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type != ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["create_fed_private"])
+        return
     if len(context.args) < 1:
-        return update.message.reply_text(MESSAGES["provide_fed_name"])
+        await update.message.reply_text(MESSAGES["provide_fed_name"])
+        return
     fed_name = " ".join(context.args)
-    fed_id = generate_fed_id(update.message.from_user.id)
-    create_federation(fed_id, fed_name, update.message.from_user.id, update.message.from_user.mention_html(), LOG_GROUP_ID)
-    update.message.reply_text(MESSAGES["new_fed_created"].format(fed_name=fed_name, fed_id=fed_id))
+    fed_id = await generate_fed_id(update.message.from_user.id)
+    await create_federation(fed_id, fed_name, update.message.from_user.id, update.message.from_user.mention_html(), LOG_GROUP_ID)
+    await update.message.reply_text(MESSAGES["new_fed_created"].format(fed_name=fed_name, fed_id=fed_id))
 
-def del_fed(update: Update, context: CallbackContext):
-    if update.message.chat.type != "private":
-        return update.message.reply_text(MESSAGES["delete_fed_private"])
+async def del_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type != ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["delete_fed_private"])
+        return
     if len(context.args) < 1:
-        return update.message.reply_text(MESSAGES["provide_fed_id"])
+        await update.message.reply_text(MESSAGES["provide_fed_id"])
+        return
     fed_id = context.args[0]
-    fed_info = get_fed_info(fed_id)
+    fed_info = await get_fed_info(fed_id)
     if not fed_info:
-        return update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        await update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        return
     if fed_info["owner_id"] != update.message.from_user.id:
-        return update.message.reply_text(MESSAGES["only_fed_owners_can_delete"])
-    delete_federation(fed_id)
-    update.message.reply_text(MESSAGES["fed_deleted"].format(fed_name=fed_info['fed_name']))
+        await update.message.reply_text(MESSAGES["only_fed_owners_can_delete"])
+        return
+    await delete_federation(fed_id)
+    await update.message.reply_text(MESSAGES["fed_deleted"].format(fed_name=fed_info['fed_name']))
 
-def fed_transfer(update: Update, context: CallbackContext):
-    if update.message.chat.type != "private":
-        return update.message.reply_text(MESSAGES["transfer_fed_private"])
+async def fed_transfer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type != ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["transfer_fed_private"])
+        return
     if len(context.args) < 2:
-        return update.message.reply_text(MESSAGES["transfer_fed_usage"])
+        await update.message.reply_text(MESSAGES["transfer_fed_usage"])
+        return
     user_id, fed_id = extract_user_and_reason(update.message)
-    fed_info = get_fed_info(fed_id)
+    fed_info = await get_fed_info(fed_id)
     if not fed_info:
-        return update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        await update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        return
     if fed_info["owner_id"] != update.message.from_user.id:
-        return update.message.reply_text(MESSAGES["only_fed_owners_can_transfer"])
-    add_fed_admin(fed_id, user_id)
-    update.message.reply_text(MESSAGES["fed_transferred"].format(fed_name=fed_info['fed_name'], user_id=user_id))
+        await update.message.reply_text(MESSAGES["only_fed_owners_can_transfer"])
+        return
+    await add_fed_admin(fed_id, user_id)
+    await update.message.reply_text(MESSAGES["fed_transferred"].format(fed_name=fed_info['fed_name'], user_id=user_id))
 
-def my_feds(update: Update, context: CallbackContext):
-    feds = get_feds_by_owner(update.message.from_user.id)
+async def my_feds(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    feds = await get_feds_by_owner(update.message.from_user.id)
     if not feds:
-        return update.message.reply_text(MESSAGES["no_federations_created"])
+        await update.message.reply_text(MESSAGES["no_federations_created"])
+        return
     fed_list = "\n".join([f"Name: {fed['fed_name']} - ID: {fed['fed_id']}" for fed in feds])
-    update.message.reply_text(MESSAGES["your_federations"].format(fed_list=fed_list))
+    await update.message.reply_text(MESSAGES["your_federations"].format(fed_list=fed_list))
 
-def rename_fed(update: Update, context: CallbackContext):
+async def rename_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 2:
-        return update.message.reply_text(MESSAGES["rename_fed_usage"])
+        await update.message.reply_text(MESSAGES["rename_fed_usage"])
+        return
     fed_id, new_name = context.args[0], " ".join(context.args[1:])
-    fed_info = get_fed_info(fed_id)
+    fed_info = await get_fed_info(fed_id)
     if not fed_info:
-        return update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        await update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        return
     if fed_info["owner_id"] != update.message.from_user.id:
-        return update.message.reply_text(MESSAGES["only_fed_owners_can_rename"])
-    conn = get_conn()
-    conn.execute('UPDATE federations SET fed_name = $1 WHERE fed_id = $2', new_name, fed_id)
-    conn.close()
-    update.message.reply_text(MESSAGES["fed_renamed"].format(new_name=new_name))
+        await update.message.reply_text(MESSAGES["only_fed_owners_can_rename"])
+        return
+    conn = await get_conn()
+    await conn.execute('UPDATE federations SET fed_name = $1 WHERE fed_id = $2', new_name, fed_id)
+    await conn.close()
+    await update.message.reply_text(MESSAGES["fed_renamed"].format(new_name=new_name))
 
-def set_unset_fed_log(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
+async def set_unset_fed_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
         if len(context.args) < 2:
-            return update.message.reply_text(MESSAGES["set_unset_fed_log_private"].format(command=context.args[0]))
+            await update.message.reply_text(MESSAGES["set_unset_fed_log_private"].format(command=update.message.text))
+            return
         chat_id = context.args[0]
         fed_id = context.args[1]
     else:
         if len(context.args) < 1:
-            return update.message.reply_text(MESSAGES["provide_fed_id"])
+            await update.message.reply_text(MESSAGES["provide_fed_id"])
+            return
         chat_id = update.message.chat.id
         fed_id = context.args[0]
-    fed_info = get_fed_info(fed_id)
+    fed_info = await get_fed_info(fed_id)
     if not fed_info:
-        return update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        await update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        return
     if fed_info["owner_id"] != update.message.from_user.id:
-        return update.message.reply_text(MESSAGES["only_fed_owners_can_set_unset_log"])
-    log_group_id = LOG_GROUP_ID if "unset" in context.args[0] else chat_id
-    set_log_chat(fed_id, log_group_id)
-    update.message.reply_text(MESSAGES["log_channel_set"] if "set" in context.args[0] else MESSAGES["log_channel_unset"])
+        await update.message.reply_text(MESSAGES["only_fed_owners_can_set_unset_log"])
+        return
+    log_group_id = LOG_GROUP_ID if "unset" in update.message.text else chat_id
+    await set_log_chat(fed_id, log_group_id)
+    await update.message.reply_text(MESSAGES["log_channel_set"] if "set" in update.message.text else MESSAGES["log_channel_unset"])
 
-def chat_fed(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
-        return update.message.reply_text(MESSAGES["chat_fed_private"])
-    fed_id = get_fed_id(update.message.chat.id)
+async def chat_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["chat_fed_private"])
+        return
+    fed_id = await get_fed_id(update.message.chat.id)
     if not fed_id:
-        return update.message.reply_text(MESSAGES["group_not_in_federation"])
-    fed_info = get_fed_info(fed_id)
-    update.message.reply_text(MESSAGES["group_in_federation"].format(fed_name=fed_info['fed_name'], fed_id=fed_id))
+        await update.message.reply_text(MESSAGES["group_not_in_federation"])
+        return
+    fed_info = await get_fed_info(fed_id)
+    await update.message.reply_text(MESSAGES["group_in_federation"].format(fed_name=fed_info['fed_name'], fed_id=fed_id))
 
-def join_fed(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
-        return update.message.reply_text(MESSAGES["join_fed_private"])
+async def join_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["join_fed_private"])
+        return
     if len(context.args) < 1:
-        return update.message.reply_text(MESSAGES["provide_fed_id_join"])
+        await update.message.reply_text(MESSAGES["provide_fed_id_join"])
+        return
     fed_id = context.args[0]
-    fed_info = get_fed_info(fed_id)
+    fed_info = await get_fed_info(fed_id)
     if not fed_info:
-        return update.message.reply_text(MESSAGES["fed_does_not_exist"])
-    if not is_group_admin(update.message.chat.id, update.message.from_user.id):
-        return update.message.reply_text(MESSAGES["only_group_admins_can_join"])
-    chat_join_fed(fed_id, update.message.chat.title, update.message.chat.id)
-    update.message.reply_text(MESSAGES["group_joined_federation"].format(fed_name=fed_info['fed_name']))
+        await update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        return
+    if not await is_group_admin(update.message.chat.id, update.message.from_user.id):
+        await update.message.reply_text(MESSAGES["only_group_admins_can_join"])
+        return
+    await chat_join_fed(fed_id, update.message.chat.title, update.message.chat.id)
+    await update.message.reply_text(MESSAGES["group_joined_federation"].format(fed_name=fed_info['fed_name']))
 
-def leave_fed(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
-        return update.message.reply_text(MESSAGES["leave_fed_private"])
-    fed_id = get_fed_id(update.message.chat.id)
+async def leave_fed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["leave_fed_private"])
+        return
+    fed_id = await get_fed_id(update.message.chat.id)
     if not fed_id:
-        return update.message.reply_text(MESSAGES["group_not_in_federation"])
-    fed_info = get_fed_info(fed_id)
-    if not is_group_admin(update.message.chat.id, update.message.from_user.id):
-        return update.message.reply_text(MESSAGES["only_group_admins_can_leave"])
-    chat_leave_fed(update.message.chat.id)
-    update.message.reply_text(MESSAGES["group_left_federation"].format(fed_name=fed_info['fed_name']))
+        await update.message.reply_text(MESSAGES["group_not_in_federation"])
+        return
+    fed_info = await get_fed_info(fed_id)
+    if not await is_group_admin(update.message.chat.id, update.message.from_user.id):
+        await update.message.reply_text(MESSAGES["only_group_admins_can_leave"])
+        return
+    await chat_leave_fed(update.message.chat.id)
+    await update.message.reply_text(MESSAGES["group_left_federation"].format(fed_name=fed_info['fed_name']))
 
-def fed_chats(update: Update, context: CallbackContext):
-    if update.message.chat.type != "private":
-        return update.message.reply_text(MESSAGES["fedchats_private"])
+async def fed_chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type != ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["fedchats_private"])
+        return
     if len(context.args) < 1:
-        return update.message.reply_text(MESSAGES["provide_fed_id_fedchats"])
+        await update.message.reply_text(MESSAGES["provide_fed_id_fedchats"])
+        return
     fed_id = context.args[0]
-    fed_info = get_fed_info(fed_id)
+    fed_info = await get_fed_info(fed_id)
     if not fed_info:
-        return update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        await update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        return
     if update.message.from_user.id not in fed_info["fadmins"] + [fed_info["owner_id"]]:
-        return update.message.reply_text(MESSAGES["only_fed_admins_can_check_fedchats"])
-    chat_ids, chat_names = chat_id_and_names_in_fed(fed_id)
+        await update.message.reply_text(MESSAGES["only_fed_admins_can_check_fedchats"])
+        return
+    chat_ids, chat_names = await chat_id_and_names_in_fed(fed_id)
     chat_list = "\n".join([f"{chat_name} (`{chat_id}`)" for chat_id, chat_name in zip(chat_ids, chat_names)])
-    update.message.reply_text(MESSAGES["fed_chats_list"].format(fed_name=fed_info['fed_name'], chat_list=chat_list))
+    await update.message.reply_text(MESSAGES["fed_chats_list"].format(fed_name=fed_info['fed_name'], chat_list=chat_list))
 
-def fed_info(update: Update, context: CallbackContext):
+async def fed_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 1:
-        fed_id = get_fed_id(update.message.chat.id)
+        fed_id = await get_fed_id(update.message.chat.id)
         if not fed_id:
-            return update.message.reply_text(MESSAGES["provide_fed_id"])
+            await update.message.reply_text(MESSAGES["provide_fed_id"])
+            return
     else:
         fed_id = context.args[0]
-    fed_info = get_fed_info(fed_id)
+    fed_info = await get_fed_info(fed_id)
     if not fed_info:
-        return update.message.reply_text(MESSAGES["fed_does_not_exist"])
-    update.message.reply_text(
+        await update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        return
+    await update.message.reply_text(
         MESSAGES["fed_info_list"].format(
             fed_name=fed_info['fed_name'],
             owner_mention=fed_info['owner_mention'],
@@ -174,111 +207,156 @@ def fed_info(update: Update, context: CallbackContext):
         )
     )
 
-def fed_admins(update: Update, context: CallbackContext):
+async def fed_admins(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 1:
-        fed_id = get_fed_id(update.message.chat.id)
+        fed_id = await get_fed_id(update.message.chat.id)
         if not fed_id:
-            return update.message.reply_text(MESSAGES["provide_fed_id"])
+            await update.message.reply_text(MESSAGES["provide_fed_id"])
+            return
     else:
         fed_id = context.args[0]
-    fed_info = get_fed_info(fed_id)
+    fed_info = await get_fed_info(fed_id)
     if not fed_info:
-        return update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        await update.message.reply_text(MESSAGES["fed_does_not_exist"])
+        return
     admin_ids = fed_info["fadmins"]
-    admins = [bot.get_chat_member(update.message.chat.id, admin_id) for admin_id in admin_ids]
-    admins_list = "\n".join([f"{admin.user.mention_html()} ({admin.user.id})" for admin in admins])
-    update.message.reply_text(MESSAGES["fed_admins_list"].format(owner_mention=fed_info['owner_mention'], admins_list=admins_list))
+    admins = [await context.bot.get_chat(admin_id) for admin_id in admin_ids]
+    admins_list = "\n".join([f"{admin.mention_html()} ({admin.id})" for admin in admins])
+    await update.message.reply_text(MESSAGES["fed_admins_list"].format(owner_mention=fed_info['owner_mention'], admins_list=admins_list))
 
-def fpromote(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
-        return update.message.reply_text(MESSAGES["fpromote_private"])
-    fed_id = get_fed_id(update.message.chat.id)
+async def fpromote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["fpromote_private"])
+        return
+    fed_id = await get_fed_id(update.message.chat.id)
     if not fed_id:
-        return update.message.reply_text(MESSAGES["group_not_in_federation"])
-    if not is_user_fed_owner(fed_id, update.message.from_user.id):
-        return update.message.reply_text(MESSAGES["only_fed_owners_can_promote"])
+        await update.message.reply_text(MESSAGES["group_not_in_federation"])
+        return
+    if not await is_user_fed_owner(fed_id, update.message.from_user.id):
+        await update.message.reply_text(MESSAGES["only_fed_owners_can_promote"])
+        return
     user_id, _ = extract_user_and_reason(update.message)
     if not user_id:
-        return update.message.reply_text(MESSAGES["provide_fed_id"])
-    add_fed_admin(fed_id, user_id)
-    update.message.reply_text(MESSAGES["user_promoted"])
+        await update.message.reply_text(MESSAGES["provide_fed_id"])
+        return
+    await add_fed_admin(fed_id, user_id)
+    await update.message.reply_text(MESSAGES["user_promoted"])
 
-def fdemote(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
-        return update.message.reply_text(MESSAGES["fdemote_private"])
-    fed_id = get_fed_id(update.message.chat.id)
+async def fdemote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["fdemote_private"])
+        return
+    fed_id = await get_fed_id(update.message.chat.id)
     if not fed_id:
-        return update.message.reply_text(MESSAGES["group_not_in_federation"])
-    if not is_user_fed_owner(fed_id, update.message.from_user.id):
-        return update.message.reply_text(MESSAGES["only_fed_owners_can_demote"])
+        await update.message.reply_text(MESSAGES["group_not_in_federation"])
+        return
+    if not await is_user_fed_owner(fed_id, update.message.from_user.id):
+        await update.message.reply_text(MESSAGES["only_fed_owners_can_demote"])
+        return
     user_id, _ = extract_user_and_reason(update.message)
     if not user_id:
-        return update.message.reply_text(MESSAGES["provide_fed_id"])
-    remove_fed_admin(fed_id, user_id)
-    update.message.reply_text(MESSAGES["user_demoted"])
+        await update.message.reply_text(MESSAGES["provide_fed_id"])
+        return
+    await remove_fed_admin(fed_id, user_id)
+    await update.message.reply_text(MESSAGES["user_demoted"])
 
-def fban_user(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
-        return update.message.reply_text(MESSAGES["fban_private"])
-    fed_id = get_fed_id(update.message.chat.id)
+async def fban_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["fban_private"])
+        return
+    fed_id = await get_fed_id(update.message.chat.id)
     if not fed_id:
-        return update.message.reply_text(MESSAGES["group_not_in_federation"])
-    if not is_user_fed_owner(fed_id, update.message.from_user.id):
-        return update.message.reply_text(MESSAGES["only_fed_admins_can_ban"])
+        await update.message.reply_text(MESSAGES["group_not_in_federation"])
+        return
+    if not await is_user_fed_owner(fed_id, update.message.from_user.id):
+        await update.message.reply_text(MESSAGES["only_fed_admins_can_ban"])
+        return
     user_id, reason = extract_user_and_reason(update.message)
     if not user_id:
-        return update.message.reply_text(MESSAGES["provide_fed_id"])
-    add_banned_user(fed_id, user_id, reason)
-    update.message.reply_text(MESSAGES["user_banned"])
+        await update.message.reply_text(MESSAGES["provide_fed_id"])
+        return
+    await add_banned_user(fed_id, user_id, reason)
+    await update.message.reply_text(MESSAGES["user_banned"])
 
-def funban_user(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
-        return update.message.reply_text(MESSAGES["unfban_private"])
-    fed_id = get_fed_id(update.message.chat.id)
+async def funban_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["unfban_private"])
+        return
+    fed_id = await get_fed_id(update.message.chat.id)
     if not fed_id:
-        return update.message.reply_text(MESSAGES["group_not_in_federation"])
-    if not is_user_fed_owner(fed_id, update.message.from_user.id):
-        return update.message.reply_text(MESSAGES["only_fed_admins_can_unban"])
+        await update.message.reply_text(MESSAGES["group_not_in_federation"])
+        return
+    if not await is_user_fed_owner(fed_id, update.message.from_user.id):
+        await update.message.reply_text(MESSAGES["only_fed_admins_can_unban"])
+        return
     user_id, reason = extract_user_and_reason(update.message)
     if not user_id:
-        return update.message.reply_text(MESSAGES["provide_fed_id"])
-    remove_banned_user(fed_id, user_id)
-    update.message.reply_text(MESSAGES["user_unbanned"])
+        await update.message.reply_text(MESSAGES["provide_fed_id"])
+        return
+    await remove_banned_user(fed_id, user_id)
+    await update.message.reply_text(MESSAGES["user_unbanned"])
 
-def fed_stat(update: Update, context: CallbackContext):
-    if update.message.chat.type != "private":
-        return update.message.reply_text(MESSAGES["fedstat_private"])
+async def fed_stat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type != ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["fedstat_private"])
+        return
     if len(context.args) < 1:
         user_id = update.message.from_user.id
     else:
         user_id = int(context.args[0])
-    status = get_user_fstatus(user_id)
-    user = bot.get_chat_member(update.message.chat.id, user_id).user
+    status = await get_user_fstatus(user_id)
+    user = await context.bot.get_chat(user_id)
     if status:
         status_list = "\n\n".join(
             [f"{i + 1}) **Fed Name:** {fed['fed_name']}\n  **Fed Id:** `{fed['fed_id']}`" for i, fed in enumerate(status)]
         )
-        update.message.reply_text(MESSAGES["user_fed_status"].format(user=user.mention_html(), status_list=status_list))
+        await update.message.reply_text(MESSAGES["user_fed_status"].format(user=user.mention_html(), status_list=status_list))
     else:
-        return update.message.reply_text(MESSAGES["user_not_banned"].format(user=user.mention_html()))
+        await update.message.reply_text(MESSAGES["user_not_banned"].format(user=user.mention_html()))
 
-def fbroadcast_message(update: Update, context: CallbackContext):
-    if update.message.chat.type == "private":
-        return update.message.reply_text(MESSAGES["fbroadcast_private"])
+async def fbroadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.chat.type == ChatType.PRIVATE:
+        await update.message.reply_text(MESSAGES["fbroadcast_private"])
+        return
     if not update.message.reply_to_message:
-        return update.message.reply_text(MESSAGES["reply_to_broadcast"])
-    fed_id = get_fed_id(update.message.chat.id)
+        await update.message.reply_text(MESSAGES["reply_to_broadcast"])
+        return
+    fed_id = await get_fed_id(update.message.chat.id)
     if not fed_id:
-        return update.message.reply_text(MESSAGES["group_not_in_federation"])
-    fed_info = get_fed_info(fed_id)
-    if not is_user_fed_owner(fed_id, update.message.from_user.id):
-        return update.message.reply_text(MESSAGES["only_fed_admins_can_broadcast"])
-    chats, _ = chat_id_and_names_in_fed(fed_id)
-    m = update.message.reply_text(MESSAGES["broadcast_in_progress"].format(seconds=len(chats)))
+        await update.message.reply_text(MESSAGES["group_not_in_federation"])
+        return
+    fed_info = await get_fed_info(fed_id)
+    if not await is_user_fed_owner(fed_id, update.message.from_user.id):
+        await update.message.reply_text(MESSAGES["only_fed_admins_can_broadcast"])
+        return
+    chats, _ = await chat_id_and_names_in_fed(fed_id)
+    m = await update.message.reply_text(MESSAGES["broadcast_in_progress"].format(seconds=len(chats)))
     for chat_id in chats:
         try:
-            update.message.reply_to_message.copy(chat_id)
-            asyncio.sleep(0.1)
+            await update.message.reply_to_message.copy(chat_id)
+            await asyncio.sleep(0.1)
         except Exception:
             pass
-    m.edit_text(MESSAGES["broadcast_done"].format(count=len(chats)))
+    await m.edit_text(MESSAGES["broadcast_done"].format(count=len(chats)))
+
+def register_command_handlers(app):
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("fedhelp", fedhelp))
+    app.add_handler(CommandHandler("newfed", new_fed))
+    app.add_handler(CommandHandler("delfed", del_fed))
+    app.add_handler(CommandHandler("fedtransfer", fed_transfer))
+    app.add_handler(CommandHandler("myfeds", my_feds))
+    app.add_handler(CommandHandler("renamefed", rename_fed))
+    app.add_handler(CommandHandler(["setfedlog", "unsetfedlog"], set_unset_fed_log))
+    app.add_handler(CommandHandler("chatfed", chat_fed))
+    app.add_handler(CommandHandler("joinfed", join_fed))
+    app.add_handler(CommandHandler("leavefed", leave_fed))
+    app.add_handler(CommandHandler("fedchats", fed_chats))
+    app.add_handler(CommandHandler("fedinfo", fed_info))
+    app.add_handler(CommandHandler("fedadmins", fed_admins))
+    app.add_handler(CommandHandler("fpromote", fpromote))
+    app.add_handler(CommandHandler("fdemote", fdemote))
+    app.add_handler(CommandHandler(["fban", "sfban"], fban_user))
+    app.add_handler(CommandHandler(["unfban", "sunfban"], funban_user))
+    app.add_handler(CommandHandler("fedstat", fed_stat))
+    app.add_handler(CommandHandler("fbroadcast", fbroadcast_message))
