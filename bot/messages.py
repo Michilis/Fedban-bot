@@ -1,5 +1,3 @@
-from pyrogram.enums import ParseMode
-
 MESSAGES = {
     "create_fed_private": "Federations can only be created by privately messaging me.",
     "provide_fed_name": "Please write the name of the federation!",
