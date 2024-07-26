@@ -1,4 +1,4 @@
-from pyrogram import filters
+from pyrogram import Client, filters
 from pyrogram.enums import ChatType, ChatMemberStatus
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from bot.app import app  # Import the app instance
