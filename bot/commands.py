@@ -70,13 +70,13 @@ async def fed_transfer(client: Client, message: Message):
         return await message.reply_text(MESSAGES["transfer_fed_private"])
     if len(message.command) < 3:
         return await message.reply_text(MESSAGES["transfer_fed_usage"])
-    user_id, fed_id = await extract_user_and_reason(message)
+    user_id, fed_id = extract_user_and_reason(message)
     fed_info = await get_fed_info(fed_id)
     if not fed_info:
         return await message.reply_text(MESSAGES["fed_does_not_exist"])
     if fed_info["owner_id"] != user.id:
         return await message.reply_text(MESSAGES["only_fed_owners_can_transfer"])
-    await add_fed_admin(fed_id, user_id)
+    await transfer_owner(fed_id, user.id, user_id)
     await message.reply_text(MESSAGES["fed_transferred"].format(fed_name=fed_info['fed_name'], user_id=user_id))
 
 @app.on_message(filters.command("myfeds"))
@@ -93,20 +93,16 @@ async def rename_fed(client: Client, message: Message):
     msg = message
     args = msg.text.split(None, 2)
     if len(args) < 3:
-        return await msg.reply_text("usage: /renamefed fed_id newname")
+        return await msg.reply_text(MESSAGES["rename_fed_usage"])
     fed_id, newname = args[1], args[2]
     verify_fed = await get_fed_info(fed_id)
     if not verify_fed:
-        return await msg.reply_text("This fed does not exist in my database!")
+        return await msg.reply_text(MESSAGES["fed_does_not_exist"])
     if await is_user_fed_owner(fed_id, user.id):
-        await fedsdb.update_one(
-            {"fed_id": str(fed_id)},
-            {"$set": {"fed_name": str(newname), "owner_id": int(user.id)}},
-            upsert=True,
-        )
-        await msg.reply_text(f"Successfully renamed your fed name to {newname}!")
+        await create_federation(fed_id, newname, user.id, user.mention, verify_fed["log_group_id"])
+        await msg.reply_text(MESSAGES["fed_renamed"].format(new_name=newname))
     else:
-        await msg.reply_text("Only federation owner can do this!")
+        await msg.reply_text(MESSAGES["only_fed_owners_can_rename"])
 
 @app.on_message(filters.command(["setfedlog", "unsetfedlog"]))
 async def set_unset_fed_log(client: Client, message: Message):
@@ -279,7 +275,7 @@ async def fban_user(client: Client, message: Message):
         return await message.reply_text(MESSAGES["only_fed_admins_can_ban"])
     if len(message.command) < 2:
         return await message.reply_text(MESSAGES["provide_fed_id"])
-    user_id, reason = await extract_user_and_reason(message)
+    user_id, reason = extract_user_and_reason(message)
     try:
         user = await app.get_users(user_id)
     except PeerIdInvalid:
@@ -349,7 +345,7 @@ async def funban_user(client: Client, message: Message):
         return await message.reply_text(MESSAGES["only_fed_admins_can_unban"])
     if len(message.command) < 2:
         return await message.reply_text(MESSAGES["provide_fed_id"])
-    user_id, reason = await extract_user_and_reason(message)
+    user_id, reason = extract_user_and_reason(message)
     user = await app.get_users(user_id)
     if not reason:
         return await message.reply_text("No reason provided.")
@@ -390,6 +386,22 @@ __**New Federation UnBan**__
     except Exception:
         await message.reply_text("User Fedunbanned, But This Fedunban Action Wasn't Logged. Add Me In LOG_GROUP.")
 
+async def status(message, user_id):
+    status = await get_user_fstatus(user_id)
+    user = await app.get_users(user_id)
+    if status:
+        response_text = "\n\n".join(
+            [
+                f"{i + 1}) **Fed Name:** {fed['fed_name']}\n  **Fed Id:** `{fed['fed_id']}`"
+                for i, fed in enumerate(status)
+            ]
+        )
+        await message.reply_text(
+            f"**Here is the list of federations that {user.mention} were banned in:**\n\n{response_text}"
+        )
+    else:
+        return await message.reply_text(f"**{user.mention} is not banned in any federations.**")
+
 @app.on_message(filters.command("fedstat"))
 async def fedstat(client: Client, message: Message):
     user = message.from_user
@@ -398,7 +410,7 @@ async def fedstat(client: Client, message: Message):
     if len(message.command) < 2:
         user_id = user.id
     else:
-        user_id, fed_id = await extract_user_and_reason(message)
+        user_id, fed_id = extract_user_and_reason(message)
         if not user_id:
             user_id = message.from_user.id
             fed_id = message.text.split(" ", 1)[1].strip()
@@ -455,50 +467,3 @@ async def fbroadcast_message(client: Client, message: Message):
         except Exception:
             pass
     await m.edit(f"**Broadcasted Message In {sent} Chats.**")
-
-@app.on_callback_query(filters.regex("rmfed_(.*)"))
-async def del_fed_button(client, cb):
-    query = cb.data
-    fed_id = query.split("_")[1]
-    if fed_id == "cancel":
-        await cb.message.edit_text("Federation deletion cancelled")
-        return
-    getfed = await get_fed_info(fed_id)
-    if getfed:
-        delete = fedsdb.delete_one({"fed_id": str(fed_id)})
-        if delete:
-            await cb.message.edit_text(
-                "You have removed your Federation! Now all the Groups that are connected with `{}` do not have a Federation.".format(
-                    getfed["fed_name"]
-                ),
-                parse_mode="markdown",
-            )
-
-@app.on_callback_query(filters.regex("trfed_(.*)"))
-async def fedtransfer_button(client, cb):
-    query = cb.data
-    data = query.split("_")[1]
-    if data == "cancel":
-        return await cb.message.edit_text("Federation transfer cancelled")
-    data2 = data.split("|", 1)
-    new_owner_id = int(data2[0])
-    fed_id = data2[1]
-    transferred = await transfer_owner(fed_id, new_owner_id)
-    if transferred:
-        await cb.message.edit_text("**Successfully transferred ownership to new owner.**")
-
-@app.on_callback_query(filters.regex("fed_(.*)"))
-async def fed_owner_help(client, cb):
-    query = cb.data
-    data = query.split("_")[1]
-    if data == "owner":
-        text = MESSAGES["fed_owner_commands"]
-    elif data == "admin":
-        text = MESSAGES["fed_admin_commands"]
-    else:
-        text = MESSAGES["user_commands"]
-    await cb.message.edit(
-        text,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data="help_module(federation)")]]),
-        parse_mode="markdown",
-    )
