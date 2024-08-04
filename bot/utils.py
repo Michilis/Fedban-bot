@@ -1,8 +1,8 @@
 import uuid
 from pyrogram.enums import ChatMemberStatus
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from db import get_fed_info
-from app import app
+from bot.db import get_fed_info
+from bot.app import app
 
 async def generate_fed_id(user_id):
     return f"{user_id}:{uuid.uuid4()}"
@@ -46,3 +46,12 @@ async def chat_id_and_names_in_fed(fed_id):
         chat = await app.get_chat(chat_id)
         chat_names.append(chat.title)
     return chat_ids, chat_names
+
+def extract_user(message):
+    if message.reply_to_message:
+        return message.reply_to_message.from_user.id
+    else:
+        args = message.text.split()
+        if len(args) > 1:
+            return int(args[1])
+    return None
