@@ -12,3 +12,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Log group ID for logging actions
 LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID"))
+
+# Sudo user IDs
+SUDOERS = [int(x) for x in os.getenv("SUDOERS").split(',')]
